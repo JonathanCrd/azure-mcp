@@ -104,8 +104,11 @@ Personal Microsoft accounts (@hotmail.com, @outlook.com, or @live.com) use a dif
 To resolve this issue, you can:
 - Use a work or school account that's part of an Azure AD tenant.
 - Request access to an Azure subscription with your existing organizational account.
+    - Learn more: [Add organization users and manage access](https://learn.microsoft.com/en-us/azure/devops/organizations/accounts/add-organization-users?view=azure-devops&tabs=browser).
 - Create a new Azure subscription and associated Azure AD tenant.
+    - Learn more: [Associate or add an Azure subscription to your Microsoft Entra tenant](https://learn.microsoft.com/en-us/entra/fundamentals/how-subscriptions-associated-directory).
 - If you must use a personal account, first create an Azure AD tenant for your Azure subscription, then authenticate using that tenant.
+    - Learn more: [Quickstart: Create a new tenant in Microsoft Entra ID](https://learn.microsoft.com/en-us/entra/fundamentals/create-new-tenant), [Set up a new Microsoft Entra tenant](https://learn.microsoft.com/en-us/entra/identity-platform/quickstart-create-new-tenant).
 
 ## Common issues
 
