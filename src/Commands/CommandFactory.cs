@@ -282,13 +282,17 @@ public class CommandFactory
 
     private RootCommand CreateRootCommand()
     {
-        var rootCommand = new RootCommand("Azure MCP Server - A Model Context Protocol (MCP) server that enables AI agents to interact with Azure services through standardized communication patterns.");
+        var rootCommand = new RootCommand("Azure MCP Server - A Model Context Protocol (MCP) server that enables AI agents to interact with Azure services through standardized communication patterns.")
+        {
+            TreatUnmatchedTokensAsErrors = true,
+        };
 
         RegisterCommandGroup();
 
         // Copy the root group's subcommands to the RootCommand
         foreach (var subGroup in _rootGroup.SubGroup)
         {
+            ConfigureCommandHelp(subGroup.Command);
             rootCommand.Add(subGroup.Command);
         }
 
@@ -296,6 +300,11 @@ public class CommandFactory
         ConfigureCommands(_rootGroup);
 
         return rootCommand;
+    }
+
+    private void ConfigureCommandHelp(Command command)
+    {
+        command.Description = $"{command.Description}\n\nUse --help for more information about the command.";
     }
 
     private void ConfigureCommandHandler(Command command, IBaseCommand implementation)
