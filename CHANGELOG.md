@@ -1,17 +1,11 @@
 # Release History
 
-## 0.0.14 (Unreleased)
+## 0.0.14 (2025-05-07)
 
 ### Features Added
 
 - Support for Azure Key Vault keys https://github.com/Azure/azure-mcp/pull/119
 - Support for Kusto (Azure Data Explorer).  https://github.com/Azure/azure-mcp/pull/21
-
-### Breaking Changes
-
-### Bugs Fixed
-
-### Other Changes
 
 ## 0.0.13 (2025-05-06)
 
