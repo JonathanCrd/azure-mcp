@@ -11,6 +11,8 @@ If you are contributing significant changes, or if the issue is already assigned
    * [Stable release](https://code.visualstudio.com/download)
    * [Insiders release](https://code.visualstudio.com/insiders)
 2. Install [GitHub Copilot](https://marketplace.visualstudio.com/items?itemName=GitHub.copilot) and [GitHub Copilot Chat](https://marketplace.visualstudio.com/items?itemName=GitHub.copilot-chat) extensions.
+3. Install [Node.js](https://nodejs.org/en/download) 20 or later
+   * Ensure `node` and `npm` are in your path
 
 ### Project Structure
 
@@ -42,7 +44,11 @@ The project is organized as follows:
 
 4. Follow the implementation guidelines in [src/Docs/new-command.md](https://github.com/Azure/azure-mcp/blob/main/src/Docs/new-command.md)
 
-5. Create a Pull Request:
+5. Add documentation for new command:
+   - [azmcp-commands.md](./docs/azmcp-commands.md)
+   - [README.md](./README.md)
+
+6. Create a Pull Request:
    - Reference the issue you created
    - Include tests in the `/tests` folder
    - Ensure all tests pass

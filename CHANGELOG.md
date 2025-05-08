@@ -1,14 +1,29 @@
 # Release History
 
-## 0.0.12 (Unreleased)
+## 0.0.14 (Unreleased)
 
 ### Features Added
 
-- Azure Search Tools https://github.com/Azure/azure-mcp/pull/83
+- Support for Azure Key Vault keys https://github.com/Azure/azure-mcp/pull/119
+- Support for Kusto (Azure Data Explorer).  https://github.com/Azure/azure-mcp/pull/21
 
 ### Breaking Changes
 
 ### Bugs Fixed
+
+### Other Changes
+
+## 0.0.13 (2025-05-06)
+
+### Features Added
+
+- Support for Azure PostgreSQL. https://github.com/Azure/azure-mcp/pull/81
+
+## 0.0.12 (2025-05-05)
+
+### Features Added
+
+- Azure Search Tools https://github.com/Azure/azure-mcp/pull/83
 
 ### Other Changes
 
@@ -18,7 +33,7 @@
 ## 0.0.11 (2025-04-29)
 
 ### Features Added
- 
+
 ### Breaking Changes
 
 ### Bugs Fixed
@@ -37,7 +52,7 @@
 - Support for Azure Resource Groups.
 - Support for Azure CLI.
 - Support for Azure Developer CLI (azd).
- 
+
 ### Breaking Changes
 
 ### Bugs Fixed
