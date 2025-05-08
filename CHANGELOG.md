@@ -1,6 +1,6 @@
 # Release History
 
-## 0.0.14 (Unreleased)
+## 0.0.14 (2025-05-07)
 
 ### Features Added
 
