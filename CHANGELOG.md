@@ -1,16 +1,15 @@
 # Release History
 
-## 0.0.15 (Unreleased)
+## 0.0.15 (2025-05-09)
 
 ### Features Added
 
 - Support for Azure Service Bus Queue. https://github.com/Azure/azure-mcp/pull/144
-
-### Breaking Changes
-
-### Bugs Fixed
+- Adds Best Practices tool that provides guidance to LLMs for effective code generation. https://github.com/Azure/azure-mcp/pull/134
 
 ### Other Changes
+
+- Disabled Parallel testing for Live Tests https://github.com/Azure/azure-mcp/pull/151
 
 ## 0.0.14 (2025-05-07)
 
