@@ -5,6 +5,8 @@
 ### Features Added
 
 - Support for Azure Service Bus Queue. https://github.com/Azure/azure-mcp/pull/144
+- Support for getting properties and runtime information for Azure Service Bus queues, topics, and subscriptions. https://github.com/Azure/azure-mcp/pull/150/
+- Support for peeking at Azure Service Bus messages from queues or subscriptions. https://github.com/Azure/azure-mcp/pull/144
 - Adds Best Practices tool that provides guidance to LLMs for effective code generation. https://github.com/Azure/azure-mcp/pull/134
 
 ### Other Changes
