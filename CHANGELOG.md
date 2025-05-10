@@ -10,7 +10,7 @@
 
 ### Other Changes
 
-- Disabled Parallel testing for Live Tests https://github.com/Azure/azure-mcp/pull/151
+- Disabled Parallel testing in the ADO pipeline for Live Tests https://github.com/Azure/azure-mcp/pull/151
 
 ## 0.0.14 (2025-05-07)
 
