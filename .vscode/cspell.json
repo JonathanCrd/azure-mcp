@@ -166,6 +166,8 @@
         "vsts",
         "WINDOWSOS",
         "WINDOWSPOOL",
-        "WINDOWSVMIMAGE"
+        "WINDOWSVMIMAGE",
+        "backoff",
+        "mystorageaccount"
     ]
 }
