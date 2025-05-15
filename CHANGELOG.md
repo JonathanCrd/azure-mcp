@@ -1,6 +1,6 @@
 # Release History
 
-## 0.0.17 (Unreleased)
+## 0.0.18 (Unreleased)
 
 ### Features Added
 
@@ -11,6 +11,8 @@
 - Include option to exclude managed keys. https://github.com/Azure/azure-mcp/pull/202
 
 ### Other Changes
+
+## 0.0.17 (2025-05-13)
 
 ## 0.0.16 (2025-05-13)
 
