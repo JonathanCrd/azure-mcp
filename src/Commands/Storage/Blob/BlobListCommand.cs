@@ -1,17 +1,15 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.CommandLine.Parsing;
-using AzureMcp.Arguments.Storage.Blob;
 using AzureMcp.Commands.Storage.Blob.Container;
-using AzureMcp.Models.Command;
+using AzureMcp.Models.Option;
+using AzureMcp.Options.Storage.Blob;
 using AzureMcp.Services.Interfaces;
 using Microsoft.Extensions.Logging;
-using ModelContextProtocol.Server;
 
 namespace AzureMcp.Commands.Storage.Blob;
 
-public sealed class BlobListCommand(ILogger<BlobListCommand> logger) : BaseContainerCommand<BlobListArguments>()
+public sealed class BlobListCommand(ILogger<BlobListCommand> logger) : BaseContainerCommand<BlobListOptions>()
 {
     private const string _commandTitle = "List Storage Blobs";
     private readonly ILogger<BlobListCommand> _logger = logger;
@@ -22,31 +20,31 @@ public sealed class BlobListCommand(ILogger<BlobListCommand> logger) : BaseConta
         $"""
         List all blobs in a Storage container. This command retrieves and displays all blobs available
         in the specified container and Storage account. Results include blob names, sizes, and content types,
-        returned as a JSON array. Requires {Models.Argument.ArgumentDefinitions.Storage.AccountName} and
-        {Models.Argument.ArgumentDefinitions.Storage.ContainerName}.
+        returned as a JSON array. Requires {OptionDefinitions.Storage.AccountName} and
+        {OptionDefinitions.Storage.ContainerName}.
         """;
 
     public override string Title => _commandTitle;
 
     [McpServerTool(Destructive = false, ReadOnly = true, Title = _commandTitle)]
-    public override async Task<CommandResponse> ExecuteAsync(CommandContext context, ParseResult commandOptions)
+    public override async Task<CommandResponse> ExecuteAsync(CommandContext context, ParseResult parseResult)
     {
-        var args = BindArguments(commandOptions);
+        var options = BindOptions(parseResult);
 
         try
         {
-            if (!await ProcessArguments(context, args))
+            if (!Validate(parseResult.CommandResult, context.Response).IsValid)
             {
                 return context.Response;
             }
 
             var storageService = context.GetService<IStorageService>();
             var blobs = await storageService.ListBlobs(
-                args.Account!,
-                args.Container!,
-                args.Subscription!,
-                args.Tenant,
-                args.RetryPolicy);
+                options.Account!,
+                options.Container!,
+                options.Subscription!,
+                options.Tenant,
+                options.RetryPolicy);
 
             context.Response.Results = blobs?.Count > 0
                 ? ResponseResult.Create(new BlobListCommandResult(blobs), StorageJsonContext.Default.BlobListCommandResult)
@@ -54,7 +52,7 @@ public sealed class BlobListCommand(ILogger<BlobListCommand> logger) : BaseConta
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error listing storage blobs.  Account: {Account}, Container: {Container}.", args.Account, args.Container);
+            _logger.LogError(ex, "Error listing storage blobs.  Account: {Account}, Container: {Container}.", options.Account, options.Container);
             HandleException(context.Response, ex);
         }
 

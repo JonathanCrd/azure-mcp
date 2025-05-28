@@ -1,16 +1,14 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.CommandLine.Parsing;
-using AzureMcp.Arguments.Cosmos;
-using AzureMcp.Models.Command;
+using AzureMcp.Commands.Subscription;
+using AzureMcp.Options.Cosmos;
 using AzureMcp.Services.Interfaces;
 using Microsoft.Extensions.Logging;
-using ModelContextProtocol.Server;
 
 namespace AzureMcp.Commands.Cosmos;
 
-public sealed class AccountListCommand(ILogger<AccountListCommand> logger) : SubscriptionCommand<AccountListArguments>()
+public sealed class AccountListCommand(ILogger<AccountListCommand> logger) : SubscriptionCommand<AccountListOptions>()
 {
     private const string _commandTitle = "List Cosmos DB Accounts";
     private readonly ILogger<AccountListCommand> _logger = logger;
@@ -28,20 +26,20 @@ public sealed class AccountListCommand(ILogger<AccountListCommand> logger) : Sub
     [McpServerTool(Destructive = false, ReadOnly = true, Title = _commandTitle)]
     public override async Task<CommandResponse> ExecuteAsync(CommandContext context, ParseResult parseResult)
     {
-        var args = BindArguments(parseResult);
+        var options = BindOptions(parseResult);
 
         try
         {
-            if (!await ProcessArguments(context, args))
+            if (!Validate(parseResult.CommandResult, context.Response).IsValid)
             {
                 return context.Response;
             }
 
             var cosmosService = context.GetService<ICosmosService>();
             var accounts = await cosmosService.GetCosmosAccounts(
-                args.Subscription!,
-                args.Tenant,
-                args.RetryPolicy);
+                options.Subscription!,
+                options.Tenant,
+                options.RetryPolicy);
 
             context.Response.Results = accounts?.Count > 0 ?
                 ResponseResult.Create(

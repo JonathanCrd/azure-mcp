@@ -1,10 +1,10 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
 
-using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using AzureMcp.Commands;
 using AzureMcp.Commands.Group;
-using AzureMcp.Models;
 
 namespace AzureMcp;
 

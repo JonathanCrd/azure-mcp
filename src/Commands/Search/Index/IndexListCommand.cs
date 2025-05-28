@@ -1,22 +1,18 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.CommandLine;
-using System.CommandLine.Parsing;
-using AzureMcp.Arguments.Search.Index;
-using AzureMcp.Models.Argument;
-using AzureMcp.Models.Command;
+using AzureMcp.Models.Option;
+using AzureMcp.Options.Search.Index;
 using AzureMcp.Services.Interfaces;
 using Microsoft.Extensions.Logging;
-using ModelContextProtocol.Server;
 
 namespace AzureMcp.Commands.Search.Index;
 
-public sealed class IndexListCommand(ILogger<IndexListCommand> logger) : GlobalCommand<IndexListArguments>()
+public sealed class IndexListCommand(ILogger<IndexListCommand> logger) : GlobalCommand<IndexListOptions>()
 {
     private const string _commandTitle = "List Azure AI Search Indexes";
     private readonly ILogger<IndexListCommand> _logger = logger;
-    private readonly Option<string> _serviceOption = ArgumentDefinitions.Search.Service.ToOption();
+    private readonly Option<string> _serviceOption = OptionDefinitions.Search.Service;
     public override string Name => "list";
 
     public override string Description =>
@@ -35,27 +31,21 @@ public sealed class IndexListCommand(ILogger<IndexListCommand> logger) : GlobalC
         command.AddOption(_serviceOption);
     }
 
-    protected override void RegisterArguments()
+    protected override IndexListOptions BindOptions(ParseResult parseResult)
     {
-        base.RegisterArguments();
-        AddArgument(CreateIndexListArgument());
-    }
-
-    protected override IndexListArguments BindArguments(ParseResult parseResult)
-    {
-        var args = base.BindArguments(parseResult);
-        args.Service = parseResult.GetValueForOption(_serviceOption);
-        return args;
+        var options = base.BindOptions(parseResult);
+        options.Service = parseResult.GetValueForOption(_serviceOption);
+        return options;
     }
 
     [McpServerTool(Destructive = false, ReadOnly = true, Title = _commandTitle)]
     public override async Task<CommandResponse> ExecuteAsync(CommandContext context, ParseResult parseResult)
     {
-        var args = BindArguments(parseResult);
+        var options = BindOptions(parseResult);
 
         try
         {
-            if (!await ProcessArguments(context, args))
+            if (!Validate(parseResult.CommandResult, context.Response).IsValid)
             {
                 return context.Response;
             }
@@ -63,8 +53,8 @@ public sealed class IndexListCommand(ILogger<IndexListCommand> logger) : GlobalC
             var searchService = context.GetService<ISearchService>();
 
             var indexes = await searchService.ListIndexes(
-                args.Service!,
-                args.RetryPolicy);
+                options.Service!,
+                options.RetryPolicy);
 
             context.Response.Results = indexes?.Count > 0
                 ? ResponseResult.Create(
@@ -82,10 +72,4 @@ public sealed class IndexListCommand(ILogger<IndexListCommand> logger) : GlobalC
     }
 
     internal record IndexListCommandResult(List<string> Indexes);
-
-    private static ArgumentBuilder<IndexListArguments> CreateIndexListArgument() =>
-        ArgumentBuilder<IndexListArguments>
-            .Create(ArgumentDefinitions.Search.Service.Name, ArgumentDefinitions.Search.Service.Description)
-            .WithValueAccessor(args => args.Service ?? string.Empty)
-            .WithIsRequired(ArgumentDefinitions.Search.Service.Required);
 }

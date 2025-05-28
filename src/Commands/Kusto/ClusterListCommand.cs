@@ -1,16 +1,14 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.CommandLine.Parsing;
-using AzureMcp.Arguments.Kusto;
-using AzureMcp.Models.Command;
+using AzureMcp.Commands.Subscription;
+using AzureMcp.Options.Kusto;
 using AzureMcp.Services.Interfaces;
 using Microsoft.Extensions.Logging;
-using ModelContextProtocol.Server;
 
 namespace AzureMcp.Commands.Kusto;
 
-public sealed class ClusterListCommand : SubscriptionCommand<ClusterListArguments>
+public sealed class ClusterListCommand : SubscriptionCommand<ClusterListOptions>
 {
     private const string _commandTitle = "List Kusto Clusters";
     private readonly ILogger<ClusterListCommand> _logger;
@@ -34,17 +32,20 @@ public sealed class ClusterListCommand : SubscriptionCommand<ClusterListArgument
     [McpServerTool(Destructive = true, ReadOnly = false, Title = _commandTitle)]
     public override async Task<CommandResponse> ExecuteAsync(CommandContext context, ParseResult parseResult)
     {
-        var args = BindArguments(parseResult);
+        var options = BindOptions(parseResult);
+
         try
         {
-            if (!await ProcessArguments(context, args))
+            if (!Validate(parseResult.CommandResult, context.Response).IsValid)
+            {
                 return context.Response;
+            }
 
             var kusto = context.GetService<IKustoService>();
             var clusterNames = await kusto.ListClusters(
-                args.Subscription!,
-                args.Tenant,
-                args.RetryPolicy);
+                options.Subscription!,
+                options.Tenant,
+                options.RetryPolicy);
 
             context.Response.Results = clusterNames?.Count > 0 ?
                 ResponseResult.Create(new ClusterListCommandResult(clusterNames), KustoJsonContext.Default.ClusterListCommandResult) :
@@ -52,7 +53,7 @@ public sealed class ClusterListCommand : SubscriptionCommand<ClusterListArgument
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "An exception occurred listing Kusto clusters. Subscription: {Subscription}.", args.Subscription);
+            _logger.LogError(ex, "An exception occurred listing Kusto clusters. Subscription: {Subscription}.", options.Subscription);
             HandleException(context.Response, ex);
         }
         return context.Response;

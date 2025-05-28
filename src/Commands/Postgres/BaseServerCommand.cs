@@ -1,18 +1,19 @@
-using System.CommandLine;
-using System.CommandLine.Parsing;
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 using System.Diagnostics.CodeAnalysis;
-using AzureMcp.Arguments.Postgres;
-using AzureMcp.Models.Argument;
+using AzureMcp.Models.Option;
+using AzureMcp.Options.Postgres;
 using Microsoft.Extensions.Logging;
 
 namespace AzureMcp.Commands.Postgres;
 
 public abstract class BaseServerCommand<
-    [DynamicallyAccessedMembers(TrimAnnotations.CommandAnnotations)] TArgs>(ILogger<BasePostgresCommand<TArgs>> logger)
-    : BasePostgresCommand<TArgs>(logger) where TArgs : BasePostgresArguments, new()
+    [DynamicallyAccessedMembers(TrimAnnotations.CommandAnnotations)] TOptions>(ILogger<BasePostgresCommand<TOptions>> logger)
+    : BasePostgresCommand<TOptions>(logger) where TOptions : BasePostgresOptions, new()
 
 {
-    private readonly Option<string> _serverOption = ArgumentDefinitions.Postgres.Server.ToOption();
+    private readonly Option<string> _serverOption = OptionDefinitions.Postgres.Server;
 
     public override string Name => "server";
 
@@ -25,22 +26,10 @@ public abstract class BaseServerCommand<
         command.AddOption(_serverOption);
     }
 
-    protected override void RegisterArguments()
+    protected override TOptions BindOptions(ParseResult parseResult)
     {
-        base.RegisterArguments();
-        AddArgument(CreateServerArgument());
+        var options = base.BindOptions(parseResult);
+        options.Server = parseResult.GetValueForOption(_serverOption);
+        return options;
     }
-
-    protected override TArgs BindArguments(ParseResult parseResult)
-    {
-        var args = base.BindArguments(parseResult);
-        args.Server = parseResult.GetValueForOption(_serverOption);
-        return args;
-    }
-
-    protected ArgumentBuilder<TArgs> CreateServerArgument() =>
-        ArgumentBuilder<TArgs>
-            .Create(ArgumentDefinitions.Postgres.Server.Name, ArgumentDefinitions.Postgres.Server.Description)
-            .WithValueAccessor(args => args.Server ?? string.Empty)
-            .WithIsRequired(ArgumentDefinitions.Postgres.Server.Required);
 }

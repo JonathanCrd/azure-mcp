@@ -1,14 +1,13 @@
-using System.CommandLine;
-using System.CommandLine.Parsing;
-using AzureMcp.Arguments.Monitor.TableType;
-using AzureMcp.Models.Command;
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
+using AzureMcp.Options.Monitor.TableType;
 using AzureMcp.Services.Interfaces;
 using Microsoft.Extensions.Logging;
-using ModelContextProtocol.Server;
 
 namespace AzureMcp.Commands.Monitor.TableType;
 
-public sealed class TableTypeListCommand(ILogger<TableTypeListCommand> logger) : BaseMonitorCommand<TableTypeListArguments>()
+public sealed class TableTypeListCommand(ILogger<TableTypeListCommand> logger) : BaseMonitorCommand<TableTypeListOptions>()
 {
     private const string _commandTitle = "List Log Analytics Table Types";
     private readonly ILogger<TableTypeListCommand> _logger = logger;
@@ -26,37 +25,32 @@ public sealed class TableTypeListCommand(ILogger<TableTypeListCommand> logger) :
         command.AddOption(_resourceGroupOption); // inherited from base
     }
 
-    protected override void RegisterArguments()
+    protected override TableTypeListOptions BindOptions(ParseResult parseResult)
     {
-        base.RegisterArguments();
-    }
-
-    protected override TableTypeListArguments BindArguments(ParseResult parseResult)
-    {
-        var args = base.BindArguments(parseResult);
-        args.ResourceGroup = parseResult.GetValueForOption(_resourceGroupOption);
-        return args;
+        var options = base.BindOptions(parseResult);
+        options.ResourceGroup = parseResult.GetValueForOption(_resourceGroupOption);
+        return options;
     }
 
     [McpServerTool(Destructive = false, ReadOnly = true, Title = _commandTitle)]
     public override async Task<CommandResponse> ExecuteAsync(CommandContext context, ParseResult parseResult)
     {
-        var args = BindArguments(parseResult);
+        var options = BindOptions(parseResult);
 
         try
         {
-            if (!await ProcessArguments(context, args))
+            if (!Validate(parseResult.CommandResult, context.Response).IsValid)
             {
                 return context.Response;
             }
 
             var monitorService = context.GetService<IMonitorService>();
             var tableTypes = await monitorService.ListTableTypes(
-                args.Subscription!,
-                args.ResourceGroup!,
-                args.Workspace!,
-                args.Tenant,
-                args.RetryPolicy);
+                options.Subscription!,
+                options.ResourceGroup!,
+                options.Workspace!,
+                options.Tenant,
+                options.RetryPolicy);
 
             context.Response.Results = tableTypes?.Count > 0 ?
                 ResponseResult.Create<TableTypeListCommandResult>(

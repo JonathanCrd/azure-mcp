@@ -1,20 +1,17 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.CommandLine.Parsing;
-using AzureMcp.Arguments.Redis.CacheForRedis;
-using AzureMcp.Models.Command;
 using AzureMcp.Models.Redis.CacheForRedis;
+using AzureMcp.Options.Redis.CacheForRedis;
 using AzureMcp.Services.Interfaces;
 using Microsoft.Extensions.Logging;
-using ModelContextProtocol.Server;
 
 namespace AzureMcp.Commands.Redis.CacheForRedis;
 
 /// <summary>
 /// Lists the access policy assignments in the specified Azure cache.
 /// </summary>
-public sealed class AccessPolicyListCommand(ILogger<AccessPolicyListCommand> logger) : BaseCacheCommand<AccessPolicyListArguments>()
+public sealed class AccessPolicyListCommand(ILogger<AccessPolicyListCommand> logger) : BaseCacheCommand<AccessPolicyListOptions>()
 {
     private const string _commandTitle = "List Redis Cache Access Policy Assignments";
     private readonly ILogger<AccessPolicyListCommand> _logger = logger;
@@ -31,23 +28,23 @@ public sealed class AccessPolicyListCommand(ILogger<AccessPolicyListCommand> log
     [McpServerTool(Destructive = false, ReadOnly = true, Title = _commandTitle)]
     public override async Task<CommandResponse> ExecuteAsync(CommandContext context, ParseResult parseResult)
     {
+        var options = BindOptions(parseResult);
+
         try
         {
-            var args = BindArguments(parseResult);
-
-            if (!await ProcessArguments(context, args))
+            if (!Validate(parseResult.CommandResult, context.Response).IsValid)
             {
                 return context.Response;
             }
 
             var redisService = context.GetService<IRedisService>() ?? throw new InvalidOperationException("Redis service is not available.");
             var accessPolicyAssignments = await redisService.ListAccessPolicyAssignmentsAsync(
-                args.Cache!,
-                args.ResourceGroup!,
-                args.Subscription!,
-                args.Tenant,
-                args.AuthMethod,
-                args.RetryPolicy);
+                options.Cache!,
+                options.ResourceGroup!,
+                options.Subscription!,
+                options.Tenant,
+                options.AuthMethod,
+                options.RetryPolicy);
 
             context.Response.Results = accessPolicyAssignments.Any() ?
                 ResponseResult.Create(

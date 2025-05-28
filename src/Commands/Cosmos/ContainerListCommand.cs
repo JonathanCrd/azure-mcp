@@ -1,17 +1,13 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.CommandLine.Parsing;
-using AzureMcp.Arguments.Cosmos;
-using AzureMcp.Models;
-using AzureMcp.Models.Command;
+using AzureMcp.Options.Cosmos;
 using AzureMcp.Services.Interfaces;
 using Microsoft.Extensions.Logging;
-using ModelContextProtocol.Server;
 
 namespace AzureMcp.Commands.Cosmos;
 
-public sealed class ContainerListCommand(ILogger<ContainerListCommand> logger) : BaseDatabaseCommand<ContainerListArguments>()
+public sealed class ContainerListCommand(ILogger<ContainerListCommand> logger) : BaseDatabaseCommand<ContainerListOptions>()
 {
     private const string _commandTitle = "List Cosmos DB Containers";
     private readonly ILogger<ContainerListCommand> _logger = logger;
@@ -30,23 +26,23 @@ public sealed class ContainerListCommand(ILogger<ContainerListCommand> logger) :
     [McpServerTool(Destructive = false, ReadOnly = true, Title = _commandTitle)]
     public override async Task<CommandResponse> ExecuteAsync(CommandContext context, ParseResult parseResult)
     {
-        var args = BindArguments(parseResult);
+        var options = BindOptions(parseResult);
 
         try
         {
-            if (!await ProcessArguments(context, args))
+            if (!Validate(parseResult.CommandResult, context.Response).IsValid)
             {
                 return context.Response;
             }
 
             var cosmosService = context.GetService<ICosmosService>();
             var containers = await cosmosService.ListContainers(
-                args.Account!,
-                args.Database!,
-                args.Subscription!,
-                args.AuthMethod ?? AuthMethod.Credential,
-                args.Tenant,
-                args.RetryPolicy);
+                options.Account!,
+                options.Database!,
+                options.Subscription!,
+                options.AuthMethod ?? AuthMethod.Credential,
+                options.Tenant,
+                options.RetryPolicy);
 
             context.Response.Results = containers?.Count > 0 ?
                 ResponseResult.Create(

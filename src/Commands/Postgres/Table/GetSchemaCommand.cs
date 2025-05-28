@@ -1,21 +1,17 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.CommandLine;
-using System.CommandLine.Parsing;
-using AzureMcp.Arguments.Postgres.Table;
-using AzureMcp.Models.Argument;
-using AzureMcp.Models.Command;
+using AzureMcp.Models.Option;
+using AzureMcp.Options.Postgres.Table;
 using AzureMcp.Services.Interfaces;
 using Microsoft.Extensions.Logging;
-using ModelContextProtocol.Server;
 
 namespace AzureMcp.Commands.Postgres.Table;
 
-public sealed class GetSchemaCommand(ILogger<GetSchemaCommand> logger) : BaseDatabaseCommand<GetSchemaArguments>(logger)
+public sealed class GetSchemaCommand(ILogger<GetSchemaCommand> logger) : BaseDatabaseCommand<GetSchemaOptions>(logger)
 {
     private const string _commandTitle = "Get PostgreSQL Table Schema";
-    private readonly Option<string> _tableOption = ArgumentDefinitions.Postgres.Table.ToOption();
+    private readonly Option<string> _tableOption = OptionDefinitions.Postgres.Table;
 
     public override string Name => "schema";
     public override string Description => "Retrieves the schema of a specified table in a PostgreSQL database.";
@@ -27,17 +23,11 @@ public sealed class GetSchemaCommand(ILogger<GetSchemaCommand> logger) : BaseDat
         command.AddOption(_tableOption);
     }
 
-    protected override void RegisterArguments()
+    protected override GetSchemaOptions BindOptions(ParseResult parseResult)
     {
-        base.RegisterArguments();
-        AddArgument(CreateTableArgument());
-    }
-
-    protected override GetSchemaArguments BindArguments(ParseResult parseResult)
-    {
-        var args = base.BindArguments(parseResult);
-        args.Table = parseResult.GetValueForOption(_tableOption);
-        return args;
+        var options = base.BindOptions(parseResult);
+        options.Table = parseResult.GetValueForOption(_tableOption);
+        return options;
     }
 
     [McpServerTool(Destructive = false, ReadOnly = true)]
@@ -45,15 +35,15 @@ public sealed class GetSchemaCommand(ILogger<GetSchemaCommand> logger) : BaseDat
     {
         try
         {
-            var args = BindArguments(parseResult);
+            var options = BindOptions(parseResult);
 
-            if (!await ProcessArguments(context, args))
+            if (!Validate(parseResult.CommandResult, context.Response).IsValid)
             {
                 return context.Response;
             }
 
             IPostgresService pgService = context.GetService<IPostgresService>() ?? throw new InvalidOperationException("PostgreSQL service is not available.");
-            List<string> schema = await pgService.GetTableSchemaAsync(args.Subscription!, args.ResourceGroup!, args.User!, args.Server!, args.Database!, args.Table!);
+            List<string> schema = await pgService.GetTableSchemaAsync(options.Subscription!, options.ResourceGroup!, options.User!, options.Server!, options.Database!, options.Table!);
             context.Response.Results = schema?.Count > 0 ?
                 ResponseResult.Create(
                     new GetSchemaCommandResult(schema),
@@ -68,12 +58,6 @@ public sealed class GetSchemaCommand(ILogger<GetSchemaCommand> logger) : BaseDat
 
         return context.Response;
     }
-
-    private static ArgumentBuilder<GetSchemaArguments> CreateTableArgument() =>
-        ArgumentBuilder<GetSchemaArguments>
-            .Create(ArgumentDefinitions.Postgres.Table.Name, ArgumentDefinitions.Postgres.Table.Description)
-            .WithValueAccessor(args => args.Table ?? string.Empty)
-            .WithIsRequired(true);
 
     internal record GetSchemaCommandResult(List<string> Schema);
 }

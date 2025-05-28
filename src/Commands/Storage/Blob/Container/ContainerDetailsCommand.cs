@@ -1,20 +1,16 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.CommandLine.Parsing;
-using System.Text.Json;
 using System.Text.Json.Serialization;
 using Azure.Storage.Blobs.Models;
-using AzureMcp.Arguments.Storage.Blob.Container;
-using AzureMcp.Models.Argument;
-using AzureMcp.Models.Command;
+using AzureMcp.Models.Option;
+using AzureMcp.Options.Storage.Blob.Container;
 using AzureMcp.Services.Interfaces;
 using Microsoft.Extensions.Logging;
-using ModelContextProtocol.Server;
 
 namespace AzureMcp.Commands.Storage.Blob.Container;
 
-public sealed class ContainerDetailsCommand(ILogger<ContainerDetailsCommand> logger) : BaseContainerCommand<ContainerDetailsArguments>()
+public sealed class ContainerDetailsCommand(ILogger<ContainerDetailsCommand> logger) : BaseContainerCommand<ContainerDetailsOptions>()
 {
     private const string _commandTitle = "Get Storage Container Details";
     private readonly ILogger<ContainerDetailsCommand> _logger = logger;
@@ -24,7 +20,7 @@ public sealed class ContainerDetailsCommand(ILogger<ContainerDetailsCommand> log
     public override string Description =>
         $"""
         Get detailed properties of a storage container including metadata, lease status, and access level.
-        Requires {ArgumentDefinitions.Storage.AccountName} and {ArgumentDefinitions.Storage.ContainerName}.
+        Requires {OptionDefinitions.Storage.AccountName} and {OptionDefinitions.Storage.ContainerName}.
         """;
 
     public override string Title => _commandTitle;
@@ -32,22 +28,22 @@ public sealed class ContainerDetailsCommand(ILogger<ContainerDetailsCommand> log
     [McpServerTool(Destructive = false, ReadOnly = true)]
     public override async Task<CommandResponse> ExecuteAsync(CommandContext context, ParseResult parseResult)
     {
-        var args = BindArguments(parseResult);
+        var options = BindOptions(parseResult);
 
         try
         {
-            if (!await ProcessArguments(context, args))
+            if (!Validate(parseResult.CommandResult, context.Response).IsValid)
             {
                 return context.Response;
             }
 
             var storageService = context.GetService<IStorageService>();
             var details = await storageService.GetContainerDetails(
-                args.Account!,
-                args.Container!,
-                args.Subscription!,
-                args.Tenant,
-                args.RetryPolicy
+                options.Account!,
+                options.Container!,
+                options.Subscription!,
+                options.Tenant,
+                options.RetryPolicy
             );
 
             var result = new ContainerDetailsCommandResult(new JsonBlobContainerProperties(details));
@@ -56,7 +52,7 @@ public sealed class ContainerDetailsCommand(ILogger<ContainerDetailsCommand> log
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting container details. Account: {Account}, Container: {Container}.", args.Account, args.Container);
+            _logger.LogError(ex, "Error getting container details. Account: {Account}, Container: {Container}.", options.Account, options.Container);
             HandleException(context.Response, ex);
             return context.Response;
         }

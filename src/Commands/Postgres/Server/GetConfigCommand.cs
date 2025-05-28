@@ -1,16 +1,13 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.CommandLine.Parsing;
-using AzureMcp.Arguments.Postgres.Server;
-using AzureMcp.Models.Command;
+using AzureMcp.Options.Postgres.Server;
 using AzureMcp.Services.Interfaces;
 using Microsoft.Extensions.Logging;
-using ModelContextProtocol.Server;
 
 namespace AzureMcp.Commands.Postgres.Server;
 
-public sealed class GetConfigCommand(ILogger<GetConfigCommand> logger) : BaseServerCommand<GetConfigArguments>(logger)
+public sealed class GetConfigCommand(ILogger<GetConfigCommand> logger) : BaseServerCommand<GetConfigOptions>(logger)
 {
     private const string _commandTitle = "Get PostgreSQL Server Configuration";
     public override string Name => "config";
@@ -24,14 +21,14 @@ public sealed class GetConfigCommand(ILogger<GetConfigCommand> logger) : BaseSer
     {
         try
         {
-            var args = BindArguments(parseResult);
-            if (!await ProcessArguments(context, args))
+            var options = BindOptions(parseResult);
+            if (!Validate(parseResult.CommandResult, context.Response).IsValid)
             {
                 return context.Response;
             }
 
             IPostgresService pgService = context.GetService<IPostgresService>() ?? throw new InvalidOperationException("PostgreSQL service is not available.");
-            var config = await pgService.GetServerConfigAsync(args.Subscription!, args.ResourceGroup!, args.User!, args.Server!);
+            var config = await pgService.GetServerConfigAsync(options.Subscription!, options.ResourceGroup!, options.User!, options.Server!);
             context.Response.Results = config?.Length > 0 ?
                 ResponseResult.Create(
                     new GetConfigCommandResult(config),

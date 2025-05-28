@@ -1,29 +1,25 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.CommandLine;
-using System.CommandLine.Parsing;
 using System.Runtime.InteropServices;
-using AzureMcp.Arguments.Extension;
 using AzureMcp.Helpers;
-using AzureMcp.Models.Argument;
-using AzureMcp.Models.Command;
+using AzureMcp.Models.Option;
+using AzureMcp.Options.Extension;
 using AzureMcp.Services.Azure;
 using AzureMcp.Services.Interfaces;
 using Microsoft.Extensions.Logging;
-using ModelContextProtocol.Server;
 
 namespace AzureMcp.Commands.Extension;
 
-public sealed class AzdCommand(ILogger<AzdCommand> logger, int processTimeoutSeconds = 300) : GlobalCommand<AzdArguments>()
+public sealed class AzdCommand(ILogger<AzdCommand> logger, int processTimeoutSeconds = 300) : GlobalCommand<AzdOptions>()
 {
     private const string _commandTitle = "Azure Developer CLI Command";
     private readonly ILogger<AzdCommand> _logger = logger;
     private readonly int _processTimeoutSeconds = processTimeoutSeconds;
-    private readonly Option<string> _commandOption = ArgumentDefinitions.Extension.Azd.Command.ToOption();
-    private readonly Option<string> _cwdOption = ArgumentDefinitions.Extension.Azd.Cwd.ToOption();
-    private readonly Option<string> _environmentOption = ArgumentDefinitions.Extension.Azd.Environment.ToOption();
-    private readonly Option<bool> _learnOption = ArgumentDefinitions.Extension.Azd.Learn.ToOption();
+    private readonly Option<string> _commandOption = OptionDefinitions.Extension.Azd.Command;
+    private readonly Option<string> _cwdOption = OptionDefinitions.Extension.Azd.Cwd;
+    private readonly Option<string> _environmentOption = OptionDefinitions.Extension.Azd.Environment;
+    private readonly Option<bool> _learnOption = OptionDefinitions.Extension.Azd.Learn;
     private static string? _cachedAzdPath;
 
     private readonly IEnumerable<string> longRunningCommands =
@@ -88,85 +84,53 @@ public sealed class AzdCommand(ILogger<AzdCommand> logger, int processTimeoutSec
         command.AddOption(_learnOption);
     }
 
-    protected override void RegisterArguments()
+    protected override AzdOptions BindOptions(ParseResult parseResult)
     {
-        base.RegisterArguments();
-        foreach (var arg in CreateArguments())
-        {
-            AddArgument(arg);
-        }
-    }
+        var options = base.BindOptions(parseResult);
+        options.Command = parseResult.GetValueForOption(_commandOption);
+        options.Cwd = parseResult.GetValueForOption(_cwdOption);
+        options.Environment = parseResult.GetValueForOption(_environmentOption);
+        options.Learn = parseResult.GetValueForOption(_learnOption);
 
-    private static ArgumentBuilder<AzdArguments>[] CreateArguments() =>
-        [
-            ArgumentBuilder<AzdArguments>
-                .Create(ArgumentDefinitions.Extension.Azd.Command.Name, ArgumentDefinitions.Extension.Azd.Command.Description)
-                .WithValueAccessor(args => args.Command ?? string.Empty)
-                .WithIsRequired(ArgumentDefinitions.Extension.Azd.Command.Required),
-
-            ArgumentBuilder<AzdArguments>
-                .Create(ArgumentDefinitions.Extension.Azd.Cwd.Name, ArgumentDefinitions.Extension.Azd.Cwd.Description)
-                .WithValueAccessor(args => args.Cwd ?? string.Empty)
-                .WithIsRequired(ArgumentDefinitions.Extension.Azd.Cwd.Required),
-
-            ArgumentBuilder<AzdArguments>
-                .Create(ArgumentDefinitions.Extension.Azd.Environment.Name, ArgumentDefinitions.Extension.Azd.Environment.Description)
-                .WithValueAccessor(args => args.Environment ?? string.Empty)
-                .WithIsRequired(ArgumentDefinitions.Extension.Azd.Environment.Required),
-
-            ArgumentBuilder<AzdArguments>
-                .Create(ArgumentDefinitions.Extension.Azd.Learn.Name, ArgumentDefinitions.Extension.Azd.Learn.Description)
-                .WithValueAccessor(args => args.Learn.ToString())
-                .WithIsRequired(ArgumentDefinitions.Extension.Azd.Learn.Required),
-        ];
-
-    protected override AzdArguments BindArguments(ParseResult parseResult)
-    {
-        var args = base.BindArguments(parseResult);
-        args.Command = parseResult.GetValueForOption(_commandOption);
-        args.Cwd = parseResult.GetValueForOption(_cwdOption);
-        args.Environment = parseResult.GetValueForOption(_environmentOption);
-        args.Learn = parseResult.GetValueForOption(_learnOption);
-
-        return args;
+        return options;
     }
 
     [McpServerTool(Destructive = true, ReadOnly = false, Title = _commandTitle)]
     public override async Task<CommandResponse> ExecuteAsync(CommandContext context, ParseResult parseResult)
     {
-        var args = BindArguments(parseResult);
+        var options = BindOptions(parseResult);
 
         try
         {
-            if (!await ProcessArguments(context, args))
+            if (!Validate(parseResult.CommandResult, context.Response).IsValid)
             {
                 return context.Response;
             }
 
             // If the agent is asking for help, return the best practices text
-            if (args.Learn && string.IsNullOrWhiteSpace(args.Command))
+            if (options.Learn && string.IsNullOrWhiteSpace(options.Command))
             {
                 context.Response.Message = _bestPracticesText;
                 context.Response.Status = 200;
                 return context.Response;
             }
 
-            ArgumentNullException.ThrowIfNull(args.Command);
-            ArgumentNullException.ThrowIfNull(args.Cwd);
+            ArgumentNullException.ThrowIfNull(options.Command);
+            ArgumentNullException.ThrowIfNull(options.Cwd);
 
             // Check if the command is a long-running command. The command can contain other flags.
             // If is long running command return error message to the user.
-            if (longRunningCommands.Any(c => args.Command.StartsWith(c, StringComparison.OrdinalIgnoreCase)))
+            if (longRunningCommands.Any(c => options.Command.StartsWith(c, StringComparison.OrdinalIgnoreCase)))
             {
-                var terminalCommand = $"azd {args.Command}";
+                var terminalCommand = $"azd {options.Command}";
 
-                if (!args.Command.Contains("--cwd", StringComparison.OrdinalIgnoreCase))
+                if (!options.Command.Contains("--cwd", StringComparison.OrdinalIgnoreCase))
                 {
-                    terminalCommand += $" --cwd {args.Cwd}";
+                    terminalCommand += $" --cwd {options.Cwd}";
                 }
-                if (!args.Command.Contains("-e", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(args.Environment))
+                if (!options.Command.Contains("-e", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(options.Environment))
                 {
-                    terminalCommand += $" -e {args.Environment}";
+                    terminalCommand += $" -e {options.Environment}";
                 }
 
                 context.Response.Status = 400;
@@ -183,13 +147,13 @@ public sealed class AzdCommand(ILogger<AzdCommand> logger, int processTimeoutSec
                 return context.Response;
             }
 
-            var command = args.Command;
+            var command = options.Command;
 
-            command += $" --cwd {args.Cwd}";
+            command += $" --cwd {options.Cwd}";
 
-            if (args.Environment is not null)
+            if (options.Environment is not null)
             {
-                command += $" -e {args.Environment}";
+                command += $" -e {options.Environment}";
             }
 
             // We need to always pass the --no-prompt flag to avoid prompting for user input and getting the process stuck
@@ -215,7 +179,7 @@ public sealed class AzdCommand(ILogger<AzdCommand> logger, int processTimeoutSec
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "An exception occurred executing command. Command: {Command}.", args.Command);
+            _logger.LogError(ex, "An exception occurred executing command. Command: {Command}.", options.Command);
             HandleException(context.Response, ex);
         }
 

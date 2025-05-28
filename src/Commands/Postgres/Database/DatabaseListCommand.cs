@@ -1,16 +1,13 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.CommandLine.Parsing;
-using AzureMcp.Arguments.Postgres.Database;
-using AzureMcp.Models.Command;
+using AzureMcp.Options.Postgres.Database;
 using AzureMcp.Services.Interfaces;
 using Microsoft.Extensions.Logging;
-using ModelContextProtocol.Server;
 
 namespace AzureMcp.Commands.Postgres.Database;
 
-public sealed class DatabaseListCommand(ILogger<DatabaseListCommand> logger) : BaseServerCommand<DatabaseListArguments>(logger)
+public sealed class DatabaseListCommand(ILogger<DatabaseListCommand> logger) : BaseServerCommand<DatabaseListOptions>(logger)
 {
     private const string _commandTitle = "List PostgreSQL Databases";
 
@@ -25,14 +22,14 @@ public sealed class DatabaseListCommand(ILogger<DatabaseListCommand> logger) : B
     {
         try
         {
-            var args = BindArguments(parseResult);
-            if (!await ProcessArguments(context, args))
+            var options = BindOptions(parseResult);
+            if (!Validate(parseResult.CommandResult, context.Response).IsValid)
             {
                 return context.Response;
             }
 
             IPostgresService pgService = context.GetService<IPostgresService>() ?? throw new InvalidOperationException("PostgreSQL service is not available.");
-            List<string> databases = await pgService.ListDatabasesAsync(args.Subscription!, args.ResourceGroup!, args.User!, args.Server!);
+            List<string> databases = await pgService.ListDatabasesAsync(options.Subscription!, options.ResourceGroup!, options.User!, options.Server!);
             context.Response.Results = databases?.Count > 0 ?
                 ResponseResult.Create(
                     new DatabaseListCommandResult(databases),
@@ -46,5 +43,6 @@ public sealed class DatabaseListCommand(ILogger<DatabaseListCommand> logger) : B
         }
         return context.Response;
     }
+
     internal record DatabaseListCommandResult(List<string> Databases);
 }

@@ -1,24 +1,20 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.CommandLine;
-using System.CommandLine.Parsing;
-using AzureMcp.Arguments.KeyVault;
-using AzureMcp.Arguments.KeyVault.Key;
-using AzureMcp.Models.Argument;
-using AzureMcp.Models.Command;
+using AzureMcp.Commands.Subscription;
+using AzureMcp.Models.Option;
+using AzureMcp.Options.KeyVault.Key;
 using AzureMcp.Services.Interfaces;
 using Microsoft.Extensions.Logging;
-using ModelContextProtocol.Server;
 
 namespace AzureMcp.Commands.KeyVault.Key;
 
-public sealed class KeyListCommand(ILogger<KeyListCommand> logger) : SubscriptionCommand<KeyListArgument>
+public sealed class KeyListCommand(ILogger<KeyListCommand> logger) : SubscriptionCommand<KeyListOptions>
 {
     private const string _commandTitle = "List Key Vault Keys";
     private readonly ILogger<KeyListCommand> _logger = logger;
-    private readonly Option<string> _vaultOption = ArgumentDefinitions.KeyVault.VaultName.ToOption();
-    private readonly Option<bool> _includeManagedKeysOption = ArgumentDefinitions.KeyVault.IncludeManagedKeys.ToOption();
+    private readonly Option<string> _vaultOption = OptionDefinitions.KeyVault.VaultName;
+    private readonly Option<bool> _includeManagedKeysOption = OptionDefinitions.KeyVault.IncludeManagedKeys;
 
     public override string Name => "list";
 
@@ -41,52 +37,33 @@ public sealed class KeyListCommand(ILogger<KeyListCommand> logger) : Subscriptio
         command.AddOption(_includeManagedKeysOption);
     }
 
-    protected override void RegisterArguments()
+    protected override KeyListOptions BindOptions(ParseResult parseResult)
     {
-        base.RegisterArguments();
-        AddArgument(CreateVaultArgument());
-        AddArgument(CreateIncludeManagedArgument());
-    }
-
-    private ArgumentBuilder<KeyListArgument> CreateIncludeManagedArgument() =>
-        ArgumentBuilder<KeyListArgument>
-            .Create(ArgumentDefinitions.KeyVault.IncludeManagedKeys.Name, ArgumentDefinitions.KeyVault.IncludeManagedKeys.Description)
-            .WithValueAccessor(args => args.IncludeManagedKeys.ToString())
-            .WithIsRequired(ArgumentDefinitions.KeyVault.IncludeManagedKeys.Required);
-
-    private static ArgumentBuilder<KeyListArgument> CreateVaultArgument() =>
-        ArgumentBuilder<KeyListArgument>
-            .Create(ArgumentDefinitions.KeyVault.VaultName.Name, ArgumentDefinitions.KeyVault.VaultName.Description)
-            .WithValueAccessor(args => args.VaultName ?? string.Empty)
-            .WithIsRequired(ArgumentDefinitions.KeyVault.VaultName.Required);
-
-    protected override KeyListArgument BindArguments(ParseResult parseResult)
-    {
-        var args = base.BindArguments(parseResult);
-        args.VaultName = parseResult.GetValueForOption(_vaultOption);
-        args.IncludeManagedKeys = parseResult.GetValueForOption(_includeManagedKeysOption);
-        return args;
+        var options = base.BindOptions(parseResult);
+        options.VaultName = parseResult.GetValueForOption(_vaultOption);
+        options.IncludeManagedKeys = parseResult.GetValueForOption(_includeManagedKeysOption);
+        return options;
     }
 
     [McpServerTool(Destructive = false, ReadOnly = true, Title = _commandTitle)]
     public override async Task<CommandResponse> ExecuteAsync(CommandContext context, ParseResult parseResult)
     {
-        var args = BindArguments(parseResult);
+        var options = BindOptions(parseResult);
 
         try
         {
-            if (!await ProcessArguments(context, args))
+            if (!Validate(parseResult.CommandResult, context.Response).IsValid)
             {
                 return context.Response;
             }
 
             var keyVaultService = context.GetService<IKeyVaultService>();
             var keys = await keyVaultService.ListKeys(
-                args.VaultName!,
-                args.IncludeManagedKeys,
-                args.Subscription!,
-                args.Tenant,
-                args.RetryPolicy);
+                options.VaultName!,
+                options.IncludeManagedKeys,
+                options.Subscription!,
+                options.Tenant,
+                options.RetryPolicy);
 
             context.Response.Results = keys?.Count > 0 ?
                 ResponseResult.Create(
@@ -96,7 +73,7 @@ public sealed class KeyListCommand(ILogger<KeyListCommand> logger) : Subscriptio
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "An exception occurred listing keys from vault {VaultName}.", args.VaultName);
+            _logger.LogError(ex, "An exception occurred listing keys from vault {VaultName}.", options.VaultName);
             HandleException(context.Response, ex);
         }
 

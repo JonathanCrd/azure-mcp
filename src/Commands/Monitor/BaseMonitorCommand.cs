@@ -1,23 +1,20 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.CommandLine;
-using System.CommandLine.Parsing;
 using System.Diagnostics.CodeAnalysis;
-using AzureMcp.Arguments;
-using AzureMcp.Arguments.Monitor;
-using AzureMcp.Models.Argument;
-using AzureMcp.Models.Command;
-using AzureMcp.Services.Interfaces;
+using AzureMcp.Commands.Subscription;
+using AzureMcp.Models.Option;
+using AzureMcp.Options;
+using AzureMcp.Options.Monitor;
 
 namespace AzureMcp.Commands.Monitor;
 
 public abstract class BaseMonitorCommand<
-    [DynamicallyAccessedMembers(TrimAnnotations.CommandAnnotations)] TArgs>
-    : SubscriptionCommand<TArgs>
-    where TArgs : SubscriptionArguments, IWorkspaceArguments, new()
+    [DynamicallyAccessedMembers(TrimAnnotations.CommandAnnotations)] TOptions>
+    : SubscriptionCommand<TOptions>
+    where TOptions : SubscriptionOptions, IWorkspaceOptions, new()
 {
-    protected readonly Option<string> _workspaceOption = ArgumentDefinitions.Monitor.Workspace.ToOption();
+    protected readonly Option<string> _workspaceOption = OptionDefinitions.Monitor.Workspace;
 
     protected override void RegisterOptions(Command command)
     {
@@ -25,22 +22,10 @@ public abstract class BaseMonitorCommand<
         command.AddOption(_workspaceOption);
     }
 
-    protected override void RegisterArguments()
+    protected override TOptions BindOptions(ParseResult parseResult)
     {
-        base.RegisterArguments();
-        AddArgument(CreateWorkspaceArgument());
-    }
-
-    protected virtual ArgumentBuilder<TArgs> CreateWorkspaceArgument() =>
-        ArgumentBuilder<TArgs>
-            .Create(ArgumentDefinitions.Monitor.Workspace.Name, ArgumentDefinitions.Monitor.Workspace.Description)
-            .WithValueAccessor(args => args.Workspace ?? string.Empty)
-            .WithIsRequired(ArgumentDefinitions.Monitor.Workspace.Required);
-
-    protected override TArgs BindArguments(ParseResult parseResult)
-    {
-        var args = base.BindArguments(parseResult);
-        args.Workspace = parseResult.GetValueForOption(_workspaceOption);
-        return args;
+        var options = base.BindOptions(parseResult);
+        options.Workspace = parseResult.GetValueForOption(_workspaceOption);
+        return options;
     }
 }

@@ -1,29 +1,23 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.CommandLine;
-using System.CommandLine.Parsing;
-using System.Text.Json;
-using AzureMcp.Arguments.Kusto;
-using AzureMcp.Models.Argument;
-using AzureMcp.Models.Command;
+using AzureMcp.Models.Option;
+using AzureMcp.Options.Kusto;
 using AzureMcp.Services.Interfaces;
 using Microsoft.Extensions.Logging;
-using ModelContextProtocol.Server;
 
 namespace AzureMcp.Commands.Kusto;
 
-public sealed class QueryCommand : BaseDatabaseCommand<QueryArguments>
+public sealed class QueryCommand : BaseDatabaseCommand<QueryOptions>
 {
     private const string _commandTitle = "Query Kusto Database";
     private readonly ILogger<QueryCommand> _logger;
+    private readonly Option<string> _queryOption = OptionDefinitions.Kusto.Query;
 
     public QueryCommand(ILogger<QueryCommand> logger) : base()
     {
         _logger = logger;
     }
-
-    private readonly Option<string> _queryOption = ArgumentDefinitions.Kusto.Query.ToOption();
 
     protected override void RegisterOptions(Command command)
     {
@@ -31,23 +25,11 @@ public sealed class QueryCommand : BaseDatabaseCommand<QueryArguments>
         command.AddOption(_queryOption);
     }
 
-    protected override void RegisterArguments()
+    protected override QueryOptions BindOptions(ParseResult parseResult)
     {
-        base.RegisterArguments();
-        AddArgument(CreateQueryArgument());
-    }
-
-    private static ArgumentBuilder<QueryArguments> CreateQueryArgument() =>
-        ArgumentBuilder<QueryArguments>
-            .Create(ArgumentDefinitions.Kusto.Query.Name, ArgumentDefinitions.Kusto.Query.Description)
-            .WithValueAccessor(args => args.Query ?? string.Empty)
-            .WithIsRequired(true);
-
-    protected override QueryArguments BindArguments(ParseResult parseResult)
-    {
-        var args = base.BindArguments(parseResult);
-        args.Query = parseResult.GetValueForOption(_queryOption);
-        return args;
+        var options = base.BindOptions(parseResult);
+        options.Query = parseResult.GetValueForOption(_queryOption);
+        return options;
     }
 
     public override string Name => "query";
@@ -64,35 +46,38 @@ public sealed class QueryCommand : BaseDatabaseCommand<QueryArguments>
     [McpServerTool(Destructive = false, ReadOnly = true, Title = _commandTitle)]
     public override async Task<CommandResponse> ExecuteAsync(CommandContext context, ParseResult parseResult)
     {
-        var args = BindArguments(parseResult);
+        var options = BindOptions(parseResult);
+
         try
         {
-            if (!await ProcessArguments(context, args))
+            if (!Validate(parseResult.CommandResult, context.Response).IsValid)
+            {
                 return context.Response;
+            }
 
             List<JsonElement> results = [];
             var kusto = context.GetService<IKustoService>();
 
-            if (UseClusterUri(args))
+            if (UseClusterUri(options))
             {
                 results = await kusto.QueryItems(
-                    args.ClusterUri!,
-                    args.Database!,
-                    args.Query!,
-                    args.Tenant,
-                    args.AuthMethod,
-                    args.RetryPolicy);
+                    options.ClusterUri!,
+                    options.Database!,
+                    options.Query!,
+                    options.Tenant,
+                    options.AuthMethod,
+                    options.RetryPolicy);
             }
             else
             {
                 results = await kusto.QueryItems(
-                    args.Subscription!,
-                    args.ClusterName!,
-                    args.Database!,
-                    args.Query!,
-                    args.Tenant,
-                    args.AuthMethod,
-                    args.RetryPolicy);
+                    options.Subscription!,
+                    options.ClusterName!,
+                    options.Database!,
+                    options.Query!,
+                    options.Tenant,
+                    options.AuthMethod,
+                    options.RetryPolicy);
             }
 
             context.Response.Results = results?.Count > 0 ?
@@ -102,7 +87,7 @@ public sealed class QueryCommand : BaseDatabaseCommand<QueryArguments>
         catch (Exception ex)
         {
             _logger.LogError(ex, "An exception occurred querying Kusto. Cluster: {Cluster}, Database: {Database},"
-            + " Query: {Query}", args.ClusterUri ?? args.ClusterName, args.Database, args.Query);
+            + " Query: {Query}", options.ClusterUri ?? options.ClusterName, options.Database, options.Query);
             HandleException(context.Response, ex);
         }
         return context.Response;

@@ -1,25 +1,21 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.CommandLine;
-using System.CommandLine.Parsing;
 using System.Runtime.InteropServices;
-using AzureMcp.Arguments.Extension;
-using AzureMcp.Models.Argument;
-using AzureMcp.Models.Command;
+using AzureMcp.Models.Option;
+using AzureMcp.Options.Extension;
 using AzureMcp.Services.Azure.Authentication;
 using AzureMcp.Services.Interfaces;
 using Microsoft.Extensions.Logging;
-using ModelContextProtocol.Server;
 
 namespace AzureMcp.Commands.Extension;
 
-public sealed class AzCommand(ILogger<AzCommand> logger, int processTimeoutSeconds = 300) : GlobalCommand<AzArguments>()
+public sealed class AzCommand(ILogger<AzCommand> logger, int processTimeoutSeconds = 300) : GlobalCommand<AzOptions>()
 {
     private const string _commandTitle = "Azure CLI Command";
     private readonly ILogger<AzCommand> _logger = logger;
     private readonly int _processTimeoutSeconds = processTimeoutSeconds;
-    private readonly Option<string> _commandOption = ArgumentDefinitions.Extension.Az.Command.ToOption();
+    private readonly Option<string> _commandOption = OptionDefinitions.Extension.Az.Command;
     private static string? _cachedAzPath;
     private volatile bool _isAuthenticated = false;
     private static readonly SemaphoreSlim _authSemaphore = new(1, 1);
@@ -48,23 +44,11 @@ Your job is to answer questions about an Azure environment by executing Azure CL
         command.AddOption(_commandOption);
     }
 
-    protected override void RegisterArguments()
+    protected override AzOptions BindOptions(ParseResult parseResult)
     {
-        base.RegisterArguments();
-        AddArgument(CreateCommandArgument());
-    }
-
-    private static ArgumentBuilder<AzArguments> CreateCommandArgument() =>
-        ArgumentBuilder<AzArguments>
-            .Create(ArgumentDefinitions.Extension.Az.Command.Name, ArgumentDefinitions.Extension.Az.Command.Description)
-            .WithValueAccessor(args => args.Command ?? string.Empty)
-            .WithIsRequired(ArgumentDefinitions.Extension.Az.Command.Required);
-
-    protected override AzArguments BindArguments(ParseResult parseResult)
-    {
-        var args = base.BindArguments(parseResult);
-        args.Command = parseResult.GetValueForOption(_commandOption);
-        return args;
+        var options = base.BindOptions(parseResult);
+        options.Command = parseResult.GetValueForOption(_commandOption);
+        return options;
     }
 
     private static string? FindAzCliPath()
@@ -162,17 +146,17 @@ Your job is to answer questions about an Azure environment by executing Azure CL
     [McpServerTool(Destructive = true, ReadOnly = false, Title = _commandTitle)]
     public override async Task<CommandResponse> ExecuteAsync(CommandContext context, ParseResult parseResult)
     {
-        var args = BindArguments(parseResult);
+        var options = BindOptions(parseResult);
 
         try
         {
-            if (!await ProcessArguments(context, args))
+            if (!Validate(parseResult.CommandResult, context.Response).IsValid)
             {
                 return context.Response;
             }
 
-            ArgumentNullException.ThrowIfNull(args.Command);
-            var command = args.Command;
+            ArgumentNullException.ThrowIfNull(options.Command);
+            var command = options.Command;
             var processService = context.GetService<IExternalProcessService>();
 
             // Try to authenticate, but continue even if it fails
@@ -192,7 +176,7 @@ Your job is to answer questions about an Azure environment by executing Azure CL
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "An exception occurred executing command. Command: {Command}.", args.Command);
+            _logger.LogError(ex, "An exception occurred executing command. Command: {Command}.", options.Command);
             HandleException(context.Response, ex);
         }
 

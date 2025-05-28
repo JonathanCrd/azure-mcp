@@ -1,20 +1,19 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.CommandLine;
-using System.CommandLine.Parsing;
 using System.Diagnostics.CodeAnalysis;
-using AzureMcp.Arguments.Storage;
-using AzureMcp.Models.Argument;
+using AzureMcp.Commands.Subscription;
+using AzureMcp.Models.Option;
+using AzureMcp.Options.Storage;
 
 namespace AzureMcp.Commands.Storage;
 
 public abstract class BaseStorageCommand<
     [DynamicallyAccessedMembers(TrimAnnotations.CommandAnnotations)] T>
     : SubscriptionCommand<T>
-    where T : BaseStorageArguments, new()
+    where T : BaseStorageOptions, new()
 {
-    protected readonly Option<string> _accountOption = ArgumentDefinitions.Storage.Account.ToOption();
+    protected readonly Option<string> _accountOption = OptionDefinitions.Storage.Account;
 
     protected override void RegisterOptions(Command command)
     {
@@ -22,24 +21,10 @@ public abstract class BaseStorageCommand<
         command.AddOption(_accountOption);
     }
 
-    protected override void RegisterArguments()
+    protected override T BindOptions(ParseResult parseResult)
     {
-        base.RegisterArguments();
-        AddArgument(CreateAccountArgument());
-    }
-
-    protected override T BindArguments(ParseResult parseResult)
-    {
-        var args = base.BindArguments(parseResult);
-        args.Account = parseResult.GetValueForOption(_accountOption);
-        return args;
-    }
-
-    protected ArgumentBuilder<T> CreateAccountArgument()
-    {
-        return ArgumentBuilder<T>
-            .Create(ArgumentDefinitions.Storage.Account.Name, ArgumentDefinitions.Storage.Account.Description)
-            .WithValueAccessor(args => args.Account ?? string.Empty)
-            .WithIsRequired(ArgumentDefinitions.Storage.Account.Required);
+        var options = base.BindOptions(parseResult);
+        options.Account = parseResult.GetValueForOption(_accountOption);
+        return options;
     }
 }

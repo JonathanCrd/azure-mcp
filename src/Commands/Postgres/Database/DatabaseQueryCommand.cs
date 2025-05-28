@@ -1,21 +1,17 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.CommandLine;
-using System.CommandLine.Parsing;
-using AzureMcp.Arguments.Postgres.Database;
-using AzureMcp.Models.Argument;
-using AzureMcp.Models.Command;
+using AzureMcp.Models.Option;
+using AzureMcp.Options.Postgres.Database;
 using AzureMcp.Services.Interfaces;
 using Microsoft.Extensions.Logging;
-using ModelContextProtocol.Server;
 
 namespace AzureMcp.Commands.Postgres.Database;
 
-public sealed class DatabaseQueryCommand(ILogger<DatabaseQueryCommand> logger) : BaseDatabaseCommand<DatabaseQueryArguments>(logger)
+public sealed class DatabaseQueryCommand(ILogger<DatabaseQueryCommand> logger) : BaseDatabaseCommand<DatabaseQueryOptions>(logger)
 {
     private const string _commandTitle = "Query PostgreSQL Database";
-    private readonly Option<string> _queryOption = ArgumentDefinitions.Postgres.Query.ToOption();
+    private readonly Option<string> _queryOption = OptionDefinitions.Postgres.Query;
     public override string Name => "query";
 
     public override string Description => "Executes a query on the PostgreSQL database.";
@@ -28,17 +24,11 @@ public sealed class DatabaseQueryCommand(ILogger<DatabaseQueryCommand> logger) :
         command.AddOption(_queryOption);
     }
 
-    protected override void RegisterArguments()
+    protected override DatabaseQueryOptions BindOptions(ParseResult parseResult)
     {
-        base.RegisterArguments();
-        AddArgument(CreateQueryArgument());
-    }
-
-    protected override DatabaseQueryArguments BindArguments(ParseResult parseResult)
-    {
-        var args = base.BindArguments(parseResult);
-        args.Query = parseResult.GetValueForOption(_queryOption);
-        return args;
+        var options = base.BindOptions(parseResult);
+        options.Query = parseResult.GetValueForOption(_queryOption);
+        return options;
     }
 
 
@@ -47,14 +37,14 @@ public sealed class DatabaseQueryCommand(ILogger<DatabaseQueryCommand> logger) :
     {
         try
         {
-            var args = BindArguments(parseResult);
-            if (!await ProcessArguments(context, args))
+            var options = BindOptions(parseResult);
+            if (!Validate(parseResult.CommandResult, context.Response).IsValid)
             {
                 return context.Response;
             }
 
             IPostgresService pgService = context.GetService<IPostgresService>() ?? throw new InvalidOperationException("PostgreSQL service is not available.");
-            List<string> queryResult = await pgService.ExecuteQueryAsync(args.Subscription!, args.ResourceGroup!, args.User!, args.Server!, args.Database!, args.Query!);
+            List<string> queryResult = await pgService.ExecuteQueryAsync(options.Subscription!, options.ResourceGroup!, options.User!, options.Server!, options.Database!, options.Query!);
             context.Response.Results = queryResult?.Count > 0 ?
                 ResponseResult.Create(
                     new DatabaseQueryCommandResult(queryResult),
@@ -69,12 +59,6 @@ public sealed class DatabaseQueryCommand(ILogger<DatabaseQueryCommand> logger) :
 
         return context.Response;
     }
-
-    private static ArgumentBuilder<DatabaseQueryArguments> CreateQueryArgument() =>
-        ArgumentBuilder<DatabaseQueryArguments>
-            .Create(ArgumentDefinitions.Postgres.Query.Name, ArgumentDefinitions.Postgres.Query.Description)
-            .WithValueAccessor(args => args.Query ?? string.Empty)
-            .WithIsRequired(true);
 
     internal record DatabaseQueryCommandResult(List<string> QueryResult);
 }

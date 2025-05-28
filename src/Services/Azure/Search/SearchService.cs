@@ -1,14 +1,13 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.Text.Json;
 using Azure;
 using Azure.ResourceManager.Search;
 using Azure.Search.Documents;
 using Azure.Search.Documents.Indexes;
 using Azure.Search.Documents.Indexes.Models;
 using Azure.Search.Documents.Models;
-using AzureMcp.Arguments;
+using AzureMcp.Options;
 using AzureMcp.Services.Interfaces;
 using static AzureMcp.Commands.Search.Index.IndexDescribeCommand;
 
@@ -25,7 +24,7 @@ public sealed class SearchService(ISubscriptionService subscriptionService, ICac
     public async Task<List<string>> ListServices(
         string subscription,
         string? tenantId = null,
-        RetryPolicyArguments? retryPolicy = null)
+        RetryPolicyOptions? retryPolicy = null)
     {
         ValidateRequiredParameters(subscription);
 
@@ -63,7 +62,7 @@ public sealed class SearchService(ISubscriptionService subscriptionService, ICac
 
     public async Task<List<string>> ListIndexes(
         string serviceName,
-        RetryPolicyArguments? retryPolicy = null)
+        RetryPolicyOptions? retryPolicy = null)
     {
         ValidateRequiredParameters(serviceName);
 
@@ -95,7 +94,7 @@ public sealed class SearchService(ISubscriptionService subscriptionService, ICac
     public async Task<SearchIndexProxy?> DescribeIndex(
         string serviceName,
         string indexName,
-        RetryPolicyArguments? retryPolicy = null)
+        RetryPolicyOptions? retryPolicy = null)
     {
         ValidateRequiredParameters(serviceName, indexName);
 
@@ -123,7 +122,7 @@ public sealed class SearchService(ISubscriptionService subscriptionService, ICac
         string serviceName,
         string indexName,
         string searchText,
-        RetryPolicyArguments? retryPolicy = null)
+        RetryPolicyOptions? retryPolicy = null)
     {
         ValidateRequiredParameters(serviceName, indexName, searchText);
 
@@ -219,7 +218,7 @@ public sealed class SearchService(ISubscriptionService subscriptionService, ICac
         return results;
     }
 
-    private static void ConfigureRetryPolicy(SearchClientOptions options, RetryPolicyArguments? retryPolicy)
+    private static void ConfigureRetryPolicy(SearchClientOptions options, RetryPolicyOptions? retryPolicy)
     {
         if (retryPolicy != null)
         {

@@ -1,24 +1,21 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.CommandLine;
-using System.CommandLine.Parsing;
 using Azure.Messaging.ServiceBus;
-using AzureMcp.Arguments.ServiceBus.Subscription;
-using AzureMcp.Models.Argument;
-using AzureMcp.Models.Command;
+using AzureMcp.Commands.Subscription;
+using AzureMcp.Models.Option;
+using AzureMcp.Options.ServiceBus.Subscription;
 using AzureMcp.Services.Interfaces;
-using ModelContextProtocol.Server;
 
 namespace AzureMcp.Commands.ServiceBus.Topic;
 
-public sealed class SubscriptionPeekCommand : SubscriptionCommand<SubscriptionPeekArguments>
+public sealed class SubscriptionPeekCommand : SubscriptionCommand<SubscriptionPeekOptions>
 {
     private const string _commandTitle = "Peek Messages from Service Bus Topic Subscription";
-    private readonly Option<string> _topicOption = ArgumentDefinitions.ServiceBus.Topic.ToOption();
-    private readonly Option<string> _subscriptionNameOption = ArgumentDefinitions.ServiceBus.Subscription.ToOption();
-    private readonly Option<int> _maxMessagesOption = ArgumentDefinitions.ServiceBus.MaxMessages.ToOption();
-    private readonly Option<string> _namespaceOption = ArgumentDefinitions.ServiceBus.Namespace.ToOption();
+    private readonly Option<string> _topicOption = OptionDefinitions.ServiceBus.Topic;
+    private readonly Option<string> _subscriptionNameOption = OptionDefinitions.ServiceBus.Subscription;
+    private readonly Option<int> _maxMessagesOption = OptionDefinitions.ServiceBus.MaxMessages;
+    private readonly Option<string> _namespaceOption = OptionDefinitions.ServiceBus.Namespace;
 
     public override string Name => "peek";
 
@@ -47,45 +44,36 @@ public sealed class SubscriptionPeekCommand : SubscriptionCommand<SubscriptionPe
         command.AddOption(_maxMessagesOption);
     }
 
-    protected override void RegisterArguments()
+    protected override SubscriptionPeekOptions BindOptions(ParseResult parseResult)
     {
-        base.RegisterArguments();
-        AddArgument(CreateSubscriptionNameArgument());
-        AddArgument(CreateTopicNameArgument());
-        AddArgument(CreateNamespaceArgument());
-        AddArgument(CreateMaxMessageArgument());
-    }
-
-    protected override SubscriptionPeekArguments BindArguments(ParseResult parseResult)
-    {
-        var args = base.BindArguments(parseResult);
-        args.SubscriptionName = parseResult.GetValueForOption(_subscriptionNameOption);
-        args.TopicName = parseResult.GetValueForOption(_topicOption);
-        args.Namespace = parseResult.GetValueForOption(_namespaceOption);
-        args.MaxMessages = parseResult.GetValueForOption(_maxMessagesOption);
-        return args;
+        var options = base.BindOptions(parseResult);
+        options.SubscriptionName = parseResult.GetValueForOption(_subscriptionNameOption);
+        options.TopicName = parseResult.GetValueForOption(_topicOption);
+        options.Namespace = parseResult.GetValueForOption(_namespaceOption);
+        options.MaxMessages = parseResult.GetValueForOption(_maxMessagesOption);
+        return options;
     }
 
     [McpServerTool(Destructive = false, ReadOnly = true, Title = _commandTitle)]
     public override async Task<CommandResponse> ExecuteAsync(CommandContext context, ParseResult parseResult)
     {
-        var args = BindArguments(parseResult);
+        var options = BindOptions(parseResult);
 
         try
         {
-            if (!await ProcessArguments(context, args))
+            if (!Validate(parseResult.CommandResult, context.Response).IsValid)
             {
                 return context.Response;
             }
 
             var service = context.GetService<IServiceBusService>();
             var messages = await service.PeekSubscriptionMessages(
-                args.Namespace!,
-                args.TopicName!,
-                args.SubscriptionName!,
-                args.MaxMessages ?? 1,
-                args.Tenant,
-                args.RetryPolicy);
+                options.Namespace!,
+                options.TopicName!,
+                options.SubscriptionName!,
+                options.MaxMessages ?? 1,
+                options.Tenant,
+                options.RetryPolicy);
 
             var peekedMessages = messages ?? new List<ServiceBusReceivedMessage>();
 
@@ -113,38 +101,6 @@ public sealed class SubscriptionPeekCommand : SubscriptionCommand<SubscriptionPe
         ServiceBusException sbEx when sbEx.Reason == ServiceBusFailureReason.MessagingEntityNotFound => 404,
         _ => base.GetStatusCode(ex)
     };
-
-    private static ArgumentBuilder<SubscriptionPeekArguments> CreateTopicNameArgument()
-    {
-        return ArgumentBuilder<SubscriptionPeekArguments>
-            .Create(ArgumentDefinitions.ServiceBus.Topic.Name, ArgumentDefinitions.ServiceBus.Topic.Description)
-            .WithValueAccessor(args => args.TopicName ?? string.Empty)
-            .WithIsRequired(true);
-    }
-
-    private static ArgumentBuilder<SubscriptionPeekArguments> CreateSubscriptionNameArgument()
-    {
-        return ArgumentBuilder<SubscriptionPeekArguments>
-            .Create(ArgumentDefinitions.ServiceBus.Subscription.Name, ArgumentDefinitions.ServiceBus.Subscription.Description)
-            .WithValueAccessor(args => args.SubscriptionName ?? string.Empty)
-            .WithIsRequired(true);
-    }
-
-    private static ArgumentBuilder<SubscriptionPeekArguments> CreateNamespaceArgument()
-    {
-        return ArgumentBuilder<SubscriptionPeekArguments>
-            .Create(ArgumentDefinitions.ServiceBus.Namespace.Name, ArgumentDefinitions.ServiceBus.Namespace.Description)
-            .WithValueAccessor(args => args.Namespace ?? string.Empty)
-            .WithIsRequired(true);
-    }
-
-    private static ArgumentBuilder<SubscriptionPeekArguments> CreateMaxMessageArgument()
-    {
-        return ArgumentBuilder<SubscriptionPeekArguments>
-            .Create(ArgumentDefinitions.ServiceBus.MaxMessages.Name, ArgumentDefinitions.ServiceBus.MaxMessages.Description)
-            .WithValueAccessor(args => args.MaxMessages?.ToString() ?? "1")
-            .WithIsRequired(false);
-    }
 
     internal record SubscriptionPeekCommandResult(List<ServiceBusReceivedMessage> Messages);
 }

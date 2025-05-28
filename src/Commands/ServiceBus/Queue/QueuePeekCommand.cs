@@ -1,23 +1,20 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.CommandLine;
-using System.CommandLine.Parsing;
 using Azure.Messaging.ServiceBus;
-using AzureMcp.Arguments.ServiceBus.Queue;
-using AzureMcp.Models.Argument;
-using AzureMcp.Models.Command;
+using AzureMcp.Commands.Subscription;
+using AzureMcp.Models.Option;
+using AzureMcp.Options.ServiceBus.Queue;
 using AzureMcp.Services.Interfaces;
-using ModelContextProtocol.Server;
 
 namespace AzureMcp.Commands.ServiceBus.Queue;
 
-public sealed class QueuePeekCommand : SubscriptionCommand<QueuePeekArguments>
+public sealed class QueuePeekCommand : SubscriptionCommand<QueuePeekOptions>
 {
     private const string _commandTitle = "Peek Messages from Service Bus Queue";
-    private readonly Option<string> _queueOption = ArgumentDefinitions.ServiceBus.Queue.ToOption();
-    private readonly Option<int> _maxMessagesOption = ArgumentDefinitions.ServiceBus.MaxMessages.ToOption();
-    private readonly Option<string> _namespaceOption = ArgumentDefinitions.ServiceBus.Namespace.ToOption();
+    private readonly Option<string> _queueOption = OptionDefinitions.ServiceBus.Queue;
+    private readonly Option<int> _maxMessagesOption = OptionDefinitions.ServiceBus.MaxMessages;
+    private readonly Option<string> _namespaceOption = OptionDefinitions.ServiceBus.Namespace;
 
     public override string Name => "peek";
 
@@ -44,42 +41,35 @@ public sealed class QueuePeekCommand : SubscriptionCommand<QueuePeekArguments>
         command.AddOption(_maxMessagesOption);
     }
 
-    protected override void RegisterArguments()
-    {
-        base.RegisterArguments();
-        AddArgument(CreateQueueArgument());
-        AddArgument(CreateNamespaceArgument());
-        AddArgument(CreateMaxMessageArgument());
-    }
 
-    protected override QueuePeekArguments BindArguments(ParseResult parseResult)
+    protected override QueuePeekOptions BindOptions(ParseResult parseResult)
     {
-        var args = base.BindArguments(parseResult);
-        args.Name = parseResult.GetValueForOption(_queueOption);
-        args.Namespace = parseResult.GetValueForOption(_namespaceOption);
-        args.MaxMessages = parseResult.GetValueForOption(_maxMessagesOption);
-        return args;
+        var options = base.BindOptions(parseResult);
+        options.Name = parseResult.GetValueForOption(_queueOption);
+        options.Namespace = parseResult.GetValueForOption(_namespaceOption);
+        options.MaxMessages = parseResult.GetValueForOption(_maxMessagesOption);
+        return options;
     }
 
     [McpServerTool(Destructive = false, ReadOnly = true)]
     public override async Task<CommandResponse> ExecuteAsync(CommandContext context, ParseResult parseResult)
     {
-        var args = BindArguments(parseResult);
+        var options = BindOptions(parseResult);
 
         try
         {
-            if (!await ProcessArguments(context, args))
+            if (!Validate(parseResult.CommandResult, context.Response).IsValid)
             {
                 return context.Response;
             }
 
             var service = context.GetService<IServiceBusService>();
             var messages = await service.PeekQueueMessages(
-                args.Namespace!,
-                args.Name!,
-                args.MaxMessages ?? 1,
-                args.Tenant,
-                args.RetryPolicy);
+                options.Namespace!,
+                options.Name!,
+                options.MaxMessages ?? 1,
+                options.Tenant,
+                options.RetryPolicy);
 
             var peekedMessages = messages ?? new List<ServiceBusReceivedMessage>();
 
@@ -107,30 +97,6 @@ public sealed class QueuePeekCommand : SubscriptionCommand<QueuePeekArguments>
         ServiceBusException sbEx when sbEx.Reason == ServiceBusFailureReason.MessagingEntityNotFound => 404,
         _ => base.GetStatusCode(ex)
     };
-
-    private static ArgumentBuilder<QueuePeekArguments> CreateQueueArgument()
-    {
-        return ArgumentBuilder<QueuePeekArguments>
-            .Create(ArgumentDefinitions.ServiceBus.Queue.Name, ArgumentDefinitions.ServiceBus.Queue.Description)
-            .WithValueAccessor(args => args.Name ?? string.Empty)
-            .WithIsRequired(true);
-    }
-
-    private static ArgumentBuilder<QueuePeekArguments> CreateNamespaceArgument()
-    {
-        return ArgumentBuilder<QueuePeekArguments>
-            .Create(ArgumentDefinitions.ServiceBus.Namespace.Name, ArgumentDefinitions.ServiceBus.Namespace.Description)
-            .WithValueAccessor(args => args.Namespace ?? string.Empty)
-            .WithIsRequired(true);
-    }
-
-    private static ArgumentBuilder<QueuePeekArguments> CreateMaxMessageArgument()
-    {
-        return ArgumentBuilder<QueuePeekArguments>
-            .Create(ArgumentDefinitions.ServiceBus.Namespace.Name, ArgumentDefinitions.ServiceBus.Namespace.Description)
-            .WithValueAccessor(args => args.MaxMessages?.ToString() ?? "1")
-            .WithIsRequired(true);
-    }
 
     internal record QueuePeekCommandResult(List<ServiceBusReceivedMessage> Messages);
 }

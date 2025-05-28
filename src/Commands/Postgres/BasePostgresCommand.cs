@@ -1,28 +1,26 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.CommandLine;
-using System.CommandLine.Parsing;
 using System.Diagnostics.CodeAnalysis;
-using AzureMcp.Arguments.Postgres;
-using AzureMcp.Models.Argument;
+using AzureMcp.Commands.Subscription;
+using AzureMcp.Models.Option;
+using AzureMcp.Options.Postgres;
 using Microsoft.Extensions.Logging;
 
 namespace AzureMcp.Commands.Postgres;
 
 public abstract class BasePostgresCommand<
-    [DynamicallyAccessedMembers(TrimAnnotations.CommandAnnotations)] TArgs>
-    : SubscriptionCommand<TArgs> where TArgs : BasePostgresArguments, new()
+    [DynamicallyAccessedMembers(TrimAnnotations.CommandAnnotations)] TOptions>
+    : SubscriptionCommand<TOptions> where TOptions : BasePostgresOptions, new()
 {
-    protected readonly Option<string> _userOption = ArgumentDefinitions.Postgres.User.ToOption();
+    protected readonly Option<string> _userOption = OptionDefinitions.Postgres.User;
 
-    protected readonly ILogger<BasePostgresCommand<TArgs>> _logger;
+    protected readonly ILogger<BasePostgresCommand<TOptions>> _logger;
 
-    protected BasePostgresCommand(ILogger<BasePostgresCommand<TArgs>> logger)
+    protected BasePostgresCommand(ILogger<BasePostgresCommand<TOptions>> logger)
     {
         _logger = logger;
     }
-
 
     protected override void RegisterOptions(Command command)
     {
@@ -31,24 +29,11 @@ public abstract class BasePostgresCommand<
         command.AddOption(_userOption);
     }
 
-    protected override void RegisterArguments()
+    protected override TOptions BindOptions(ParseResult parseResult)
     {
-        base.RegisterArguments();
-        AddArgument(CreateResourceGroupArgument());
-        AddArgument(CreateUserArgument());
+        var options = base.BindOptions(parseResult);
+        options.ResourceGroup = parseResult.GetValueForOption(_resourceGroupOption);
+        options.User = parseResult.GetValueForOption(_userOption);
+        return options;
     }
-
-    protected override TArgs BindArguments(ParseResult parseResult)
-    {
-        var args = base.BindArguments(parseResult);
-        args.ResourceGroup = parseResult.GetValueForOption(_resourceGroupOption);
-        args.User = parseResult.GetValueForOption(_userOption);
-        return args;
-    }
-
-    protected ArgumentBuilder<TArgs> CreateUserArgument() =>
-        ArgumentBuilder<TArgs>
-            .Create(ArgumentDefinitions.Postgres.User.Name, ArgumentDefinitions.Postgres.User.Description)
-            .WithValueAccessor(args => args.User ?? string.Empty)
-            .WithIsRequired(ArgumentDefinitions.Postgres.User.Required);
 }

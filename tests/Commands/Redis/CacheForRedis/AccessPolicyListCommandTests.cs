@@ -48,7 +48,7 @@ public class AccessPolicyListCommandTests
             "sub123",
             Arg.Any<string>(),
             Arg.Any<AzureMcp.Models.AuthMethod>(),
-            Arg.Any<AzureMcp.Arguments.RetryPolicyArguments>())
+            Arg.Any<AzureMcp.Options.RetryPolicyOptions>())
             .Returns(expectedAssignments);
 
         var command = new AccessPolicyListCommand(_logger);
@@ -84,7 +84,7 @@ public class AccessPolicyListCommandTests
             "sub123",
             Arg.Any<string>(),
             Arg.Any<AzureMcp.Models.AuthMethod>(),
-            Arg.Any<AzureMcp.Arguments.RetryPolicyArguments>())
+            Arg.Any<AzureMcp.Options.RetryPolicyOptions>())
             .Returns([]);
 
         var command = new AccessPolicyListCommand(_logger);
@@ -107,7 +107,7 @@ public class AccessPolicyListCommandTests
             subscriptionId: "sub123",
             tenant: Arg.Any<string>(),
             authMethod: Arg.Any<AzureMcp.Models.AuthMethod>(),
-            retryPolicy: Arg.Any<AzureMcp.Arguments.RetryPolicyArguments>())
+            retryPolicy: Arg.Any<AzureMcp.Options.RetryPolicyOptions>())
             .ThrowsAsync(new Exception("Test error"));
 
         var command = new AccessPolicyListCommand(_logger);
@@ -130,16 +130,16 @@ public class AccessPolicyListCommandTests
     {
         var command = new AccessPolicyListCommand(_logger);
 
-        var args = new List<string>();
+        var options = new List<string>();
         if (parameterToKeep == "--subscription")
-            args.AddRange(["--subscription", "sub123"]);
+            options.AddRange(["--subscription", "sub123"]);
         if (parameterToKeep == "--resource-group")
-            args.AddRange(["--resource-group", "rg1"]);
+            options.AddRange(["--resource-group", "rg1"]);
         if (parameterToKeep == "--cache")
-            args.AddRange(["--cache", "cache1"]);
+            options.AddRange(["--cache", "cache1"]);
 
         var parser = new Parser(command.GetCommand());
-        var parseResult = parser.Parse(args.ToArray());
+        var parseResult = parser.Parse(options.ToArray());
         var context = new CommandContext(_serviceProvider);
 
         var response = await command.ExecuteAsync(context, parseResult);

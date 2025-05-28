@@ -4,10 +4,10 @@
 using System.CommandLine.Parsing;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using AzureMcp.Arguments;
 using AzureMcp.Commands.Kusto;
 using AzureMcp.Models;
 using AzureMcp.Models.Command;
+using AzureMcp.Options;
 using AzureMcp.Services.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -37,15 +37,6 @@ public sealed class SampleCommandTests
         yield return new object[] { "--cluster-uri https://mycluster.kusto.windows.net --database-name db1 --table-name table1", true };
     }
 
-    [Fact]
-    public void Execute_ReturnsArguments()
-    {
-        var command = new SampleCommand(_logger);
-        var arguments = command.GetArguments();
-
-        Assert.Equal(12, arguments!.Count());
-    }
-
     [Theory]
     [MemberData(nameof(SampleArgumentMatrix))]
     public async Task ExecuteAsync_ReturnsSampleResults(string cliArgs, bool useClusterUri)
@@ -58,14 +49,14 @@ public sealed class SampleCommandTests
                 "https://mycluster.kusto.windows.net",
                 "db1",
                 "table1 | sample 10",
-                Arg.Any<string>(), Arg.Any<AuthMethod?>(), Arg.Any<RetryPolicyArguments>())
+                Arg.Any<string>(), Arg.Any<AuthMethod?>(), Arg.Any<RetryPolicyOptions>())
                 .Returns(expectedJson);
         }
         else
         {
             _kusto.QueryItems(
                 "sub1", "mycluster", "db1", "table1 | sample 10",
-                Arg.Any<string>(), Arg.Any<AuthMethod?>(), Arg.Any<RetryPolicyArguments>())
+                Arg.Any<string>(), Arg.Any<AuthMethod?>(), Arg.Any<RetryPolicyOptions>())
                 .Returns(expectedJson);
         }
         var command = new SampleCommand(_logger);
@@ -99,14 +90,14 @@ public sealed class SampleCommandTests
                 "https://mycluster.kusto.windows.net",
                 "db1",
                 "table1 | sample 10",
-                Arg.Any<string>(), Arg.Any<AuthMethod?>(), Arg.Any<RetryPolicyArguments>())
+                Arg.Any<string>(), Arg.Any<AuthMethod?>(), Arg.Any<RetryPolicyOptions>())
                 .Returns(new List<System.Text.Json.JsonElement>());
         }
         else
         {
             _kusto.QueryItems(
                 "sub1", "mycluster", "db1", "table1 | sample 10",
-                Arg.Any<string>(), Arg.Any<AuthMethod?>(), Arg.Any<RetryPolicyArguments>())
+                Arg.Any<string>(), Arg.Any<AuthMethod?>(), Arg.Any<RetryPolicyOptions>())
                 .Returns(new List<System.Text.Json.JsonElement>());
         }
         var command = new SampleCommand(_logger);
@@ -130,14 +121,14 @@ public sealed class SampleCommandTests
                 "https://mycluster.kusto.windows.net",
                 "db1",
                 "table1 | sample 10",
-                Arg.Any<string>(), Arg.Any<AuthMethod?>(), Arg.Any<RetryPolicyArguments>())
+                Arg.Any<string>(), Arg.Any<AuthMethod?>(), Arg.Any<RetryPolicyOptions>())
                 .Returns(Task.FromException<List<System.Text.Json.JsonElement>>(new Exception("Test error")));
         }
         else
         {
             _kusto.QueryItems(
                 "sub1", "mycluster", "db1", "table1 | sample 10",
-                Arg.Any<string>(), Arg.Any<AuthMethod?>(), Arg.Any<RetryPolicyArguments>())
+                Arg.Any<string>(), Arg.Any<AuthMethod?>(), Arg.Any<RetryPolicyOptions>())
                 .Returns(Task.FromException<List<System.Text.Json.JsonElement>>(new Exception("Test error")));
         }
         var command = new SampleCommand(_logger);
@@ -152,7 +143,7 @@ public sealed class SampleCommandTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_ReturnsBadRequest_WhenMissingRequiredArguments()
+    public async Task ExecuteAsync_ReturnsBadRequest_WhenMissingRequiredOptions()
     {
         var command = new SampleCommand(_logger);
         var parser = new Parser(command.GetCommand());

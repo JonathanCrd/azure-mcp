@@ -2,9 +2,8 @@
 // Licensed under the MIT License.
 
 using Azure.Messaging.ServiceBus;
-using Azure.Messaging.ServiceBus.Administration;
-using AzureMcp.Arguments;
 using AzureMcp.Models.ServiceBus;
+using AzureMcp.Options;
 
 namespace AzureMcp.Services.Interfaces;
 
@@ -25,7 +24,7 @@ public interface IServiceBusService
         string topicName,
         string subscriptionName,
         string? tenantId = null,
-        RetryPolicyArguments? retryPolicy = null);
+        RetryPolicyOptions? retryPolicy = null);
 
     /// <summary>
     /// Gets the details of a Service Bus queue.
@@ -41,7 +40,7 @@ public interface IServiceBusService
         string namespaceName,
         string queueName,
         string? tenantId = null,
-        RetryPolicyArguments? retryPolicy = null);
+        RetryPolicyOptions? retryPolicy = null);
 
     /// <summary>
     /// Gets the details of a Service Bus topic.
@@ -56,7 +55,7 @@ public interface IServiceBusService
         string namespaceName,
         string topicName,
         string? tenantId = null,
-        RetryPolicyArguments? retryPolicy = null);
+        RetryPolicyOptions? retryPolicy = null);
 
     /// <summary>
     /// Peeks messages from a Service Bus queue without removing them.
@@ -74,7 +73,7 @@ public interface IServiceBusService
         string queueName,
         int maxMessages,
         string? tenantId = null,
-        RetryPolicyArguments? retryPolicy = null);
+        RetryPolicyOptions? retryPolicy = null);
 
     /// <summary>
     /// Peeks messages from a Service Bus subscription without removing them.
@@ -94,5 +93,5 @@ public interface IServiceBusService
         string subscriptionName,
         int maxMessages,
         string? tenantId = null,
-        RetryPolicyArguments? retryPolicy = null);
+        RetryPolicyOptions? retryPolicy = null);
 }

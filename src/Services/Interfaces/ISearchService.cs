@@ -1,9 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.Text.Json;
-using Azure.Search.Documents.Indexes.Models;
-using AzureMcp.Arguments;
+using AzureMcp.Options;
 using static AzureMcp.Commands.Search.Index.IndexDescribeCommand;
 
 namespace AzureMcp.Services.Interfaces;
@@ -13,11 +11,11 @@ public interface ISearchService
     Task<List<string>> ListServices(
         string subscription,
         string? tenantId = null,
-        RetryPolicyArguments? retryPolicy = null);
+        RetryPolicyOptions? retryPolicy = null);
 
     Task<List<string>> ListIndexes(
         string serviceName,
-        RetryPolicyArguments? retryPolicy = null);
+        RetryPolicyOptions? retryPolicy = null);
 
     /// <summary>
     /// Gets the full definition of a search index
@@ -29,7 +27,7 @@ public interface ISearchService
     Task<SearchIndexProxy?> DescribeIndex(
         string serviceName,
         string indexName,
-        RetryPolicyArguments? retryPolicy = null);
+        RetryPolicyOptions? retryPolicy = null);
 
     /// <summary>
     /// Queries an Azure Search index
@@ -43,5 +41,5 @@ public interface ISearchService
         string serviceName,
         string indexName,
         string searchText,
-        RetryPolicyArguments? retryPolicy = null);
+        RetryPolicyOptions? retryPolicy = null);
 }

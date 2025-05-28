@@ -1,19 +1,17 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.CommandLine;
-using System.CommandLine.Parsing;
 using System.Diagnostics.CodeAnalysis;
-using AzureMcp.Arguments.Cosmos;
-using AzureMcp.Models.Argument;
+using AzureMcp.Models.Option;
+using AzureMcp.Options.Cosmos;
 
 namespace AzureMcp.Commands.Cosmos;
 
 public abstract class BaseDatabaseCommand<
-    [DynamicallyAccessedMembers(TrimAnnotations.CommandAnnotations)] TArgs>
-    : BaseCosmosCommand<TArgs> where TArgs : BaseDatabaseArguments, new()
+    [DynamicallyAccessedMembers(TrimAnnotations.CommandAnnotations)] TOptions>
+    : BaseCosmosCommand<TOptions> where TOptions : BaseDatabaseOptions, new()
 {
-    protected readonly Option<string> _databaseOption = ArgumentDefinitions.Cosmos.Database.ToOption();
+    protected readonly Option<string> _databaseOption = OptionDefinitions.Cosmos.Database;
 
     protected override void RegisterOptions(Command command)
     {
@@ -21,23 +19,10 @@ public abstract class BaseDatabaseCommand<
         command.AddOption(_databaseOption);
     }
 
-    protected override void RegisterArguments()
+    protected override TOptions BindOptions(ParseResult parseResult)
     {
-        base.RegisterArguments();
-        AddArgument(CreateDatabaseArgument());
-
+        var options = base.BindOptions(parseResult);
+        options.Database = parseResult.GetValueForOption(_databaseOption);
+        return options;
     }
-
-    protected override TArgs BindArguments(ParseResult parseResult)
-    {
-        var args = base.BindArguments(parseResult);
-        args.Database = parseResult.GetValueForOption(_databaseOption);
-        return args;
-    }
-
-    protected ArgumentBuilder<TArgs> CreateDatabaseArgument() =>
-        ArgumentBuilder<TArgs>
-            .Create(ArgumentDefinitions.Cosmos.Database.Name, ArgumentDefinitions.Cosmos.Database.Description)
-            .WithValueAccessor(args => args.Database ?? string.Empty)
-            .WithIsRequired(ArgumentDefinitions.Cosmos.Database.Required);
 }

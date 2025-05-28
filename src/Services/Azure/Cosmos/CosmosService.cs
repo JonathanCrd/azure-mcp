@@ -3,8 +3,7 @@
 
 using System.Text.Json.Nodes;
 using Azure.ResourceManager.CosmosDB;
-using AzureMcp.Arguments;
-using AzureMcp.Models;
+using AzureMcp.Options;
 using AzureMcp.Services.Interfaces;
 using Microsoft.Azure.Cosmos;
 
@@ -25,7 +24,7 @@ public class CosmosService(ISubscriptionService subscriptionService, ITenantServ
         string subscriptionId,
         string accountName,
         string? tenant = null,
-        RetryPolicyArguments? retryPolicy = null)
+        RetryPolicyOptions? retryPolicy = null)
     {
         ValidateRequiredParameters(subscriptionId, accountName);
 
@@ -46,7 +45,7 @@ public class CosmosService(ISubscriptionService subscriptionService, ITenantServ
         string subscriptionId,
         AuthMethod authMethod,
         string? tenant = null,
-        RetryPolicyArguments? retryPolicy = null)
+        RetryPolicyOptions? retryPolicy = null)
     {
         var clientOptions = new CosmosClientOptions { AllowBulkExecution = true };
         clientOptions.CosmosClientTelemetryOptions.DisableDistributedTracing = false;
@@ -107,7 +106,7 @@ public class CosmosService(ISubscriptionService subscriptionService, ITenantServ
         string subscriptionId,
         AuthMethod authMethod = AuthMethod.Credential,
         string? tenant = null,
-        RetryPolicyArguments? retryPolicy = null)
+        RetryPolicyOptions? retryPolicy = null)
     {
         ValidateRequiredParameters(accountName, subscriptionId);
 
@@ -148,7 +147,7 @@ public class CosmosService(ISubscriptionService subscriptionService, ITenantServ
         throw new Exception($"Failed to create Cosmos client for account '{accountName}' with any authentication method");
     }
 
-    public async Task<List<string>> GetCosmosAccounts(string subscriptionId, string? tenant = null, RetryPolicyArguments? retryPolicy = null)
+    public async Task<List<string>> GetCosmosAccounts(string subscriptionId, string? tenant = null, RetryPolicyOptions? retryPolicy = null)
     {
         ValidateRequiredParameters(subscriptionId);
 
@@ -177,7 +176,7 @@ public class CosmosService(ISubscriptionService subscriptionService, ITenantServ
         string subscriptionId,
         AuthMethod authMethod = AuthMethod.Credential,
         string? tenant = null,
-        RetryPolicyArguments? retryPolicy = null)
+        RetryPolicyOptions? retryPolicy = null)
     {
         ValidateRequiredParameters(accountName, subscriptionId);
 
@@ -207,7 +206,7 @@ public class CosmosService(ISubscriptionService subscriptionService, ITenantServ
         string subscriptionId,
         AuthMethod authMethod = AuthMethod.Credential,
         string? tenant = null,
-        RetryPolicyArguments? retryPolicy = null)
+        RetryPolicyOptions? retryPolicy = null)
     {
         ValidateRequiredParameters(accountName, databaseName, subscriptionId);
 
@@ -240,7 +239,7 @@ public class CosmosService(ISubscriptionService subscriptionService, ITenantServ
         string subscriptionId,
         AuthMethod authMethod = AuthMethod.Credential,
         string? tenant = null,
-        RetryPolicyArguments? retryPolicy = null)
+        RetryPolicyOptions? retryPolicy = null)
     {
         ValidateRequiredParameters(accountName, databaseName, containerName, subscriptionId);
 

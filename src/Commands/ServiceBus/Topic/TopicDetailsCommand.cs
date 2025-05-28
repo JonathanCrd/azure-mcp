@@ -1,23 +1,20 @@
-﻿// Copyright (c) Microsoft Corporation.
+// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.CommandLine;
-using System.CommandLine.Parsing;
 using Azure.Messaging.ServiceBus;
-using AzureMcp.Arguments.ServiceBus.Subscription;
-using AzureMcp.Models.Argument;
-using AzureMcp.Models.Command;
+using AzureMcp.Commands.Subscription;
+using AzureMcp.Models.Option;
 using AzureMcp.Models.ServiceBus;
+using AzureMcp.Options.ServiceBus.Subscription;
 using AzureMcp.Services.Interfaces;
-using ModelContextProtocol.Server;
 
 namespace AzureMcp.Commands.ServiceBus.Topic;
 
-public sealed class TopicDetailsCommand : SubscriptionCommand<BaseTopicArguments>
+public sealed class TopicDetailsCommand : SubscriptionCommand<BaseTopicOptions>
 {
     private const string _commandTitle = "Get Service Bus Topic Details";
-    private readonly Option<string> _topicOption = ArgumentDefinitions.ServiceBus.Topic.ToOption();
-    private readonly Option<string> _namespaceOption = ArgumentDefinitions.ServiceBus.Namespace.ToOption();
+    private readonly Option<string> _topicOption = OptionDefinitions.ServiceBus.Topic;
+    private readonly Option<string> _namespaceOption = OptionDefinitions.ServiceBus.Namespace;
 
     public override string Name => "details";
 
@@ -40,39 +37,34 @@ public sealed class TopicDetailsCommand : SubscriptionCommand<BaseTopicArguments
         command.AddOption(_topicOption);
     }
 
-    protected override void RegisterArguments()
-    {
-        base.RegisterArguments();
-        AddArgument(CreateTopicNameArgument());
-        AddArgument(CreateNamespaceArgument());
-    }
 
-    protected override BaseTopicArguments BindArguments(ParseResult parseResult)
+
+    protected override BaseTopicOptions BindOptions(ParseResult parseResult)
     {
-        var args = base.BindArguments(parseResult);
-        args.TopicName = parseResult.GetValueForOption(_topicOption);
-        args.Namespace = parseResult.GetValueForOption(_namespaceOption);
-        return args;
+        var options = base.BindOptions(parseResult);
+        options.TopicName = parseResult.GetValueForOption(_topicOption);
+        options.Namespace = parseResult.GetValueForOption(_namespaceOption);
+        return options;
     }
 
     [McpServerTool(Destructive = false, ReadOnly = true, Title = _commandTitle)]
     public override async Task<CommandResponse> ExecuteAsync(CommandContext context, ParseResult parseResult)
     {
-        var args = BindArguments(parseResult);
+        var options = BindOptions(parseResult);
 
         try
         {
-            if (!await ProcessArguments(context, args))
+            if (!Validate(parseResult.CommandResult, context.Response).IsValid)
             {
                 return context.Response;
             }
 
             var service = context.GetService<IServiceBusService>();
             var details = await service.GetTopicDetails(
-                args.Namespace!,
-                args.TopicName!,
-                args.Tenant,
-                args.RetryPolicy);
+                options.Namespace!,
+                options.TopicName!,
+                options.Tenant,
+                options.RetryPolicy);
 
             context.Response.Results = ResponseResult.Create(
                 new TopicDetailsCommandResult(details),
@@ -98,22 +90,6 @@ public sealed class TopicDetailsCommand : SubscriptionCommand<BaseTopicArguments
         ServiceBusException sbEx when sbEx.Reason == ServiceBusFailureReason.MessagingEntityNotFound => 404,
         _ => base.GetStatusCode(ex)
     };
-
-    private static ArgumentBuilder<SubscriptionPeekArguments> CreateTopicNameArgument()
-    {
-        return ArgumentBuilder<SubscriptionPeekArguments>
-            .Create(ArgumentDefinitions.ServiceBus.Topic.Name, ArgumentDefinitions.ServiceBus.Topic.Description)
-            .WithValueAccessor(args => args.TopicName ?? string.Empty)
-            .WithIsRequired(true);
-    }
-
-    private static ArgumentBuilder<SubscriptionPeekArguments> CreateNamespaceArgument()
-    {
-        return ArgumentBuilder<SubscriptionPeekArguments>
-            .Create(ArgumentDefinitions.ServiceBus.Namespace.Name, ArgumentDefinitions.ServiceBus.Namespace.Description)
-            .WithValueAccessor(args => args.Namespace ?? string.Empty)
-            .WithIsRequired(true);
-    }
 
     internal record TopicDetailsCommandResult(TopicDetails TopicDetails);
 }

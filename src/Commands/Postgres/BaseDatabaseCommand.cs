@@ -1,17 +1,18 @@
-using System.CommandLine;
-using System.CommandLine.Parsing;
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 using System.Diagnostics.CodeAnalysis;
-using AzureMcp.Arguments.Postgres;
-using AzureMcp.Models.Argument;
+using AzureMcp.Models.Option;
+using AzureMcp.Options.Postgres;
 using Microsoft.Extensions.Logging;
 
 namespace AzureMcp.Commands.Postgres;
 
 public abstract class BaseDatabaseCommand<
-    [DynamicallyAccessedMembers(TrimAnnotations.CommandAnnotations)] TArgs>(ILogger<BasePostgresCommand<TArgs>> logger)
-    : BaseServerCommand<TArgs>(logger) where TArgs : BasePostgresArguments, new()
+    [DynamicallyAccessedMembers(TrimAnnotations.CommandAnnotations)] TOptions>(ILogger<BasePostgresCommand<TOptions>> logger)
+    : BaseServerCommand<TOptions>(logger) where TOptions : BasePostgresOptions, new()
 {
-    private readonly Option<string> _databaseOption = ArgumentDefinitions.Postgres.Database.ToOption();
+    private readonly Option<string> _databaseOption = OptionDefinitions.Postgres.Database;
 
     public override string Name => "database";
 
@@ -24,22 +25,10 @@ public abstract class BaseDatabaseCommand<
         command.AddOption(_databaseOption);
     }
 
-    protected override void RegisterArguments()
+    protected override TOptions BindOptions(ParseResult parseResult)
     {
-        base.RegisterArguments();
-        AddArgument(CreateDatabaseArgument());
+        var options = base.BindOptions(parseResult);
+        options.Database = parseResult.GetValueForOption(_databaseOption);
+        return options;
     }
-
-    protected override TArgs BindArguments(ParseResult parseResult)
-    {
-        var args = base.BindArguments(parseResult);
-        args.Database = parseResult.GetValueForOption(_databaseOption);
-        return args;
-    }
-
-    protected ArgumentBuilder<TArgs> CreateDatabaseArgument() =>
-        ArgumentBuilder<TArgs>
-            .Create(ArgumentDefinitions.Postgres.Database.Name, ArgumentDefinitions.Postgres.Database.Description)
-            .WithValueAccessor(args => args.Database ?? string.Empty)
-            .WithIsRequired(ArgumentDefinitions.Postgres.Database.Required);
 }

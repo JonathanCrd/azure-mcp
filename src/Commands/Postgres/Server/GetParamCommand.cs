@@ -1,21 +1,17 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.CommandLine;
-using System.CommandLine.Parsing;
-using AzureMcp.Arguments.Postgres.Server;
-using AzureMcp.Models.Argument;
-using AzureMcp.Models.Command;
+using AzureMcp.Models.Option;
+using AzureMcp.Options.Postgres.Server;
 using AzureMcp.Services.Interfaces;
 using Microsoft.Extensions.Logging;
-using ModelContextProtocol.Server;
 
 namespace AzureMcp.Commands.Postgres.Server;
 
-public sealed class GetParamCommand(ILogger<GetParamCommand> logger) : BaseServerCommand<GetParamArguments>(logger)
+public sealed class GetParamCommand(ILogger<GetParamCommand> logger) : BaseServerCommand<GetParamOptions>(logger)
 {
     private const string _commandTitle = "Get PostgreSQL Server Parameter";
-    private readonly Option<string> _paramOption = ArgumentDefinitions.Postgres.Param.ToOption();
+    private readonly Option<string> _paramOption = OptionDefinitions.Postgres.Param;
     public override string Name => "param";
 
     public override string Description =>
@@ -29,17 +25,11 @@ public sealed class GetParamCommand(ILogger<GetParamCommand> logger) : BaseServe
         command.AddOption(_paramOption);
     }
 
-    protected override void RegisterArguments()
+    protected override GetParamOptions BindOptions(ParseResult parseResult)
     {
-        base.RegisterArguments();
-        AddArgument(CreateParamArgument());
-    }
-
-    protected override GetParamArguments BindArguments(ParseResult parseResult)
-    {
-        var args = base.BindArguments(parseResult);
-        args.Param = parseResult.GetValueForOption(_paramOption);
-        return args;
+        var options = base.BindOptions(parseResult);
+        options.Param = parseResult.GetValueForOption(_paramOption);
+        return options;
     }
 
     [McpServerTool(Destructive = false, ReadOnly = true, Title = _commandTitle)]
@@ -47,15 +37,15 @@ public sealed class GetParamCommand(ILogger<GetParamCommand> logger) : BaseServe
     {
         try
         {
-            var args = BindArguments(parseResult);
+            var options = BindOptions(parseResult);
 
-            if (!await ProcessArguments(context, args))
+            if (!Validate(parseResult.CommandResult, context.Response).IsValid)
             {
                 return context.Response;
             }
 
             IPostgresService pgService = context.GetService<IPostgresService>() ?? throw new InvalidOperationException("PostgreSQL service is not available.");
-            var parameterValue = await pgService.GetServerParameterAsync(args.Subscription!, args.ResourceGroup!, args.User!, args.Server!, args.Param!);
+            var parameterValue = await pgService.GetServerParameterAsync(options.Subscription!, options.ResourceGroup!, options.User!, options.Server!, options.Param!);
             context.Response.Results = parameterValue?.Length > 0 ?
                 ResponseResult.Create(
                     new GetParamCommandResult(parameterValue),
@@ -69,12 +59,6 @@ public sealed class GetParamCommand(ILogger<GetParamCommand> logger) : BaseServe
         }
         return context.Response;
     }
-
-    private static ArgumentBuilder<GetParamArguments> CreateParamArgument() =>
-        ArgumentBuilder<GetParamArguments>
-            .Create(ArgumentDefinitions.Postgres.Param.Name, ArgumentDefinitions.Postgres.Param.Description)
-            .WithValueAccessor(args => args.Param ?? string.Empty)
-            .WithIsRequired(true);
 
     internal record GetParamCommandResult(string ParameterValue);
 }

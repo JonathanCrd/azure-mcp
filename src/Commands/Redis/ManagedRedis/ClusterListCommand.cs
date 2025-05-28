@@ -1,20 +1,18 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.CommandLine.Parsing;
-using AzureMcp.Arguments.Redis.ManagedRedis;
-using AzureMcp.Models.Command;
+using AzureMcp.Commands.Subscription;
 using AzureMcp.Models.Redis.ManagedRedis;
+using AzureMcp.Options.Redis.ManagedRedis;
 using AzureMcp.Services.Interfaces;
 using Microsoft.Extensions.Logging;
-using ModelContextProtocol.Server;
 
 namespace AzureMcp.Commands.Redis.ManagedRedis;
 
 /// <summary>
 /// Lists Azure Managed Redis cluster resources (`Balanced`, `MemoryOptimized`, `ComputeOptimized`, and `FlashOptimized` tiers) and Azure Redis Enterprise cluster resources (`Enterprise` and `EnterpriseFlash` tiers) in the specified subscription.
 /// </summary>
-public sealed class ClusterListCommand(ILogger<ClusterListCommand> logger) : SubscriptionCommand<ClusterListArguments>()
+public sealed class ClusterListCommand(ILogger<ClusterListCommand> logger) : SubscriptionCommand<ClusterListOptions>()
 {
     private const string _commandTitle = "List Redis Clusters";
     private readonly ILogger<ClusterListCommand> _logger = logger;
@@ -31,21 +29,21 @@ public sealed class ClusterListCommand(ILogger<ClusterListCommand> logger) : Sub
     [McpServerTool(Destructive = false, ReadOnly = true, Title = _commandTitle)]
     public override async Task<CommandResponse> ExecuteAsync(CommandContext context, ParseResult parseResult)
     {
+        var options = BindOptions(parseResult);
+
         try
         {
-            var args = BindArguments(parseResult);
-
-            if (!await ProcessArguments(context, args))
+            if (!Validate(parseResult.CommandResult, context.Response).IsValid)
             {
                 return context.Response;
             }
 
             var redisService = context.GetService<IRedisService>() ?? throw new InvalidOperationException("Redis service is not available.");
             var clusters = await redisService.ListClustersAsync(
-                args.Subscription!,
-                args.Tenant,
-                args.AuthMethod,
-                args.RetryPolicy);
+                options.Subscription!,
+                options.Tenant,
+                options.AuthMethod,
+                options.RetryPolicy);
 
             context.Response.Results = clusters.Any() ?
                 ResponseResult.Create(

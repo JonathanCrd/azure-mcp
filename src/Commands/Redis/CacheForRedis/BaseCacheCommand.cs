@@ -1,19 +1,18 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.CommandLine;
-using System.CommandLine.Parsing;
 using System.Diagnostics.CodeAnalysis;
-using AzureMcp.Arguments.Redis.CacheForRedis;
-using AzureMcp.Models.Argument;
+using AzureMcp.Commands.Subscription;
+using AzureMcp.Models.Option;
+using AzureMcp.Options.Redis.CacheForRedis;
 
 namespace AzureMcp.Commands.Redis.CacheForRedis;
 
 public abstract class BaseCacheCommand<
     [DynamicallyAccessedMembers(TrimAnnotations.CommandAnnotations)] T>
-    : SubscriptionCommand<T> where T : BaseCacheArguments, new()
+    : SubscriptionCommand<T> where T : BaseCacheOptions, new()
 {
-    protected readonly Option<string> _cacheOption = ArgumentDefinitions.Redis.Cache.ToOption();
+    protected readonly Option<string> _cacheOption = OptionDefinitions.Redis.Cache;
 
     protected override void RegisterOptions(Command command)
     {
@@ -22,24 +21,11 @@ public abstract class BaseCacheCommand<
         command.AddOption(_resourceGroupOption);
     }
 
-    protected override void RegisterArguments()
+    protected override T BindOptions(ParseResult parseResult)
     {
-        base.RegisterArguments();
-        AddArgument(CreateCacheArgument());
-        AddArgument(CreateResourceGroupArgument());
+        var options = base.BindOptions(parseResult);
+        options.Cache = parseResult.GetValueForOption(_cacheOption);
+        options.ResourceGroup = parseResult.GetValueForOption(_resourceGroupOption) ?? "";
+        return options;
     }
-
-    protected override T BindArguments(ParseResult parseResult)
-    {
-        var args = base.BindArguments(parseResult);
-        args.Cache = parseResult.GetValueForOption(_cacheOption);
-        args.ResourceGroup = parseResult.GetValueForOption(_resourceGroupOption) ?? ArgumentDefinitions.Common.ResourceGroup.DefaultValue;
-        return args;
-    }
-
-    protected ArgumentBuilder<T> CreateCacheArgument() =>
-        ArgumentBuilder<T>
-            .Create(ArgumentDefinitions.Redis.Cache.Name, ArgumentDefinitions.Redis.Cache.Description)
-            .WithValueAccessor(args => args.Cache ?? string.Empty)
-            .WithIsRequired(ArgumentDefinitions.Redis.Cache.Required);
 }

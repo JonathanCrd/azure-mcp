@@ -1,17 +1,13 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.CommandLine.Parsing;
-using AzureMcp.Arguments.Cosmos;
-using AzureMcp.Models;
-using AzureMcp.Models.Command;
+using AzureMcp.Options.Cosmos;
 using AzureMcp.Services.Interfaces;
 using Microsoft.Extensions.Logging;
-using ModelContextProtocol.Server;
 
 namespace AzureMcp.Commands.Cosmos;
 
-public sealed class DatabaseListCommand(ILogger<DatabaseListCommand> logger) : BaseCosmosCommand<DatabaseListArguments>()
+public sealed class DatabaseListCommand(ILogger<DatabaseListCommand> logger) : BaseCosmosCommand<DatabaseListOptions>()
 {
     private const string _commandTitle = "List Cosmos DB Databases";
     private readonly ILogger<DatabaseListCommand> _logger = logger;
@@ -29,22 +25,22 @@ public sealed class DatabaseListCommand(ILogger<DatabaseListCommand> logger) : B
     [McpServerTool(Destructive = false, ReadOnly = true, Title = _commandTitle)]
     public override async Task<CommandResponse> ExecuteAsync(CommandContext context, ParseResult parseResult)
     {
-        var args = BindArguments(parseResult);
+        var options = BindOptions(parseResult);
 
         try
         {
-            if (!await ProcessArguments(context, args))
+            if (!Validate(parseResult.CommandResult, context.Response).IsValid)
             {
                 return context.Response;
             }
 
             var cosmosService = context.GetService<ICosmosService>();
             var databases = await cosmosService.ListDatabases(
-                args.Account!,
-                args.Subscription!,
-                args.AuthMethod ?? AuthMethod.Credential,
-                args.Tenant,
-                args.RetryPolicy);
+                options.Account!,
+                options.Subscription!,
+                options.AuthMethod ?? AuthMethod.Credential,
+                options.Tenant,
+                options.RetryPolicy);
 
             context.Response.Results = databases?.Count > 0 ?
                 ResponseResult.Create(
@@ -54,7 +50,7 @@ public sealed class DatabaseListCommand(ILogger<DatabaseListCommand> logger) : B
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "An exception occurred listing databases. Account: {Account}.", args.Account);
+            _logger.LogError(ex, "An exception occurred listing databases. Account: {Account}.", options.Account);
             HandleException(context.Response, ex);
         }
 

@@ -1,16 +1,11 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.CommandLine;
 using System.Reflection;
-using System.Text.Json;
 using System.Text.Json.Nodes;
-using AzureMcp.Models;
-using AzureMcp.Models.Command;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
-using ModelContextProtocol.Server;
 
 namespace AzureMcp.Commands.Server;
 
@@ -149,27 +144,28 @@ public class ToolOperations
             };
         }
 
-        var args = command.GetArguments()?.ToList();
+        var options = command.GetCommand().Options;
+
 
         var schema = new JsonObject
         {
             ["type"] = "object"
         };
 
-        if (args != null && args.Count > 0)
+        if (options != null && options.Count > 0)
         {
             var arguments = new JsonObject();
-            foreach (var arg in args)
+            foreach (var option in options)
             {
-                arguments.Add(arg.Name, new JsonObject()
+                arguments.Add(option.Name, new JsonObject()
                 {
-                    ["type"] = arg.Type.ToLower(),
-                    ["description"] = arg.Description,
+                    ["type"] = option.ValueType.ToString().ToLower(),
+                    ["description"] = option.Description,
                 });
             }
 
             schema["properties"] = arguments;
-            schema["required"] = new JsonArray(args.Where(p => p.Required).Select(p => (JsonNode)p.Name).ToArray());
+            schema["required"] = new JsonArray(options.Where(p => p.IsRequired).Select(p => (JsonNode)p.Name).ToArray());
         }
 
         var newOptions = new JsonSerializerOptions(McpJsonUtilities.DefaultOptions);

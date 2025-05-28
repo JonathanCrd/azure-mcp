@@ -1,25 +1,21 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.CommandLine;
-using System.CommandLine.Parsing;
-using Azure.Security.KeyVault.Keys;
-using AzureMcp.Arguments.KeyVault.Key;
-using AzureMcp.Models.Argument;
-using AzureMcp.Models.Command;
+using AzureMcp.Commands.Subscription;
+using AzureMcp.Models.Option;
+using AzureMcp.Options.KeyVault.Key;
 using AzureMcp.Services.Interfaces;
 using Microsoft.Extensions.Logging;
-using ModelContextProtocol.Server;
 
 namespace AzureMcp.Commands.KeyVault.Key;
 
-public sealed class KeyCreateCommand(ILogger<KeyCreateCommand> logger) : SubscriptionCommand<KeyCreateArguments>
+public sealed class KeyCreateCommand(ILogger<KeyCreateCommand> logger) : SubscriptionCommand<KeyCreateOptions>
 {
     private const string _commandTitle = "Create Key Vault Key";
     private readonly ILogger<KeyCreateCommand> _logger = logger;
-    private readonly Option<string> _vaultOption = ArgumentDefinitions.KeyVault.VaultName.ToOption();
-    private readonly Option<string> _keyOption = ArgumentDefinitions.KeyVault.KeyName.ToOption();
-    private readonly Option<string> _keyTypeOption = ArgumentDefinitions.KeyVault.KeyType.ToOption();
+    private readonly Option<string> _vaultOption = OptionDefinitions.KeyVault.VaultName;
+    private readonly Option<string> _keyOption = OptionDefinitions.KeyVault.KeyName;
+    private readonly Option<string> _keyTypeOption = OptionDefinitions.KeyVault.KeyType;
 
     public override string Name => "create";
 
@@ -50,61 +46,35 @@ public sealed class KeyCreateCommand(ILogger<KeyCreateCommand> logger) : Subscri
         command.AddOption(_keyTypeOption);
     }
 
-    protected override void RegisterArguments()
+    protected override KeyCreateOptions BindOptions(ParseResult parseResult)
     {
-        base.RegisterArguments();
-        AddArgument(CreateVaultArgument());
-        AddArgument(CreateKeyArgument());
-        AddArgument(CreateKeyTypeArgument());
-    }
-
-    private static ArgumentBuilder<KeyCreateArguments> CreateVaultArgument() =>
-        ArgumentBuilder<KeyCreateArguments>
-            .Create(ArgumentDefinitions.KeyVault.VaultName.Name, ArgumentDefinitions.KeyVault.VaultName.Description)
-            .WithValueAccessor(args => args.VaultName ?? string.Empty)
-            .WithIsRequired(ArgumentDefinitions.KeyVault.VaultName.Required);
-
-    private static ArgumentBuilder<KeyCreateArguments> CreateKeyArgument() =>
-        ArgumentBuilder<KeyCreateArguments>
-            .Create(ArgumentDefinitions.KeyVault.KeyName.Name, ArgumentDefinitions.KeyVault.KeyName.Description)
-            .WithValueAccessor(args => args.KeyName ?? string.Empty)
-            .WithIsRequired(ArgumentDefinitions.KeyVault.KeyName.Required);
-
-    private static ArgumentBuilder<KeyCreateArguments> CreateKeyTypeArgument() =>
-        ArgumentBuilder<KeyCreateArguments>
-            .Create(ArgumentDefinitions.KeyVault.KeyType.Name, ArgumentDefinitions.KeyVault.KeyType.Description)
-            .WithValueAccessor(args => args.KeyType ?? string.Empty)
-            .WithIsRequired(ArgumentDefinitions.KeyVault.KeyType.Required);
-
-    protected override KeyCreateArguments BindArguments(ParseResult parseResult)
-    {
-        var args = base.BindArguments(parseResult);
-        args.VaultName = parseResult.GetValueForOption(_vaultOption);
-        args.KeyName = parseResult.GetValueForOption(_keyOption);
-        args.KeyType = parseResult.GetValueForOption(_keyTypeOption);
-        return args;
+        var options = base.BindOptions(parseResult);
+        options.VaultName = parseResult.GetValueForOption(_vaultOption);
+        options.KeyName = parseResult.GetValueForOption(_keyOption);
+        options.KeyType = parseResult.GetValueForOption(_keyTypeOption);
+        return options;
     }
 
     [McpServerTool(Destructive = false, ReadOnly = false, Title = _commandTitle)]
     public override async Task<CommandResponse> ExecuteAsync(CommandContext context, ParseResult parseResult)
     {
-        var args = BindArguments(parseResult);
+        var options = BindOptions(parseResult);
 
         try
         {
-            if (!await ProcessArguments(context, args))
+            if (!Validate(parseResult.CommandResult, context.Response).IsValid)
             {
                 return context.Response;
             }
 
             var service = context.GetService<IKeyVaultService>();
             var key = await service.CreateKey(
-                args.VaultName!,
-                args.KeyName!,
-                args.KeyType!,
-                args.Subscription!,
-                args.Tenant,
-                args.RetryPolicy);
+                options.VaultName!,
+                options.KeyName!,
+                options.KeyType!,
+                options.Subscription!,
+                options.Tenant,
+                options.RetryPolicy);
 
             context.Response.Results = ResponseResult.Create(
                 new KeyCreateCommandResult(key.Name, key.KeyType.ToString(), key.Properties.Enabled, key.Properties.NotBefore, key.Properties.ExpiresOn, key.Properties.CreatedOn, key.Properties.UpdatedOn),
@@ -112,7 +82,7 @@ public sealed class KeyCreateCommand(ILogger<KeyCreateCommand> logger) : Subscri
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error creating key {KeyName} in vault {VaultName}", args.KeyName, args.VaultName);
+            _logger.LogError(ex, "Error creating key {KeyName} in vault {VaultName}", options.KeyName, options.VaultName);
             HandleException(context.Response, ex);
         }
 

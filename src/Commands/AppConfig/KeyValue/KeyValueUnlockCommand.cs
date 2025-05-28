@@ -1,16 +1,13 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.CommandLine.Parsing;
-using AzureMcp.Arguments.AppConfig.KeyValue;
-using AzureMcp.Models.Command;
+using AzureMcp.Options.AppConfig.KeyValue;
 using AzureMcp.Services.Interfaces;
 using Microsoft.Extensions.Logging;
-using ModelContextProtocol.Server;
 
 namespace AzureMcp.Commands.AppConfig.KeyValue;
 
-public sealed class KeyValueUnlockCommand(ILogger<KeyValueUnlockCommand> logger) : BaseKeyValueCommand<KeyValueUnlockArguments>()
+public sealed class KeyValueUnlockCommand(ILogger<KeyValueUnlockCommand> logger) : BaseKeyValueCommand<KeyValueUnlockOptions>()
 {
     private const string _commandTitle = "Unlock App Configuration Key-Value Setting";
     private readonly ILogger<KeyValueUnlockCommand> _logger = logger;
@@ -30,32 +27,31 @@ public sealed class KeyValueUnlockCommand(ILogger<KeyValueUnlockCommand> logger)
     [McpServerTool(Destructive = false, ReadOnly = false, Title = _commandTitle)]
     public override async Task<CommandResponse> ExecuteAsync(CommandContext context, ParseResult parseResult)
     {
-        var args = BindArguments(parseResult);
+        var options = BindOptions(parseResult);
 
         try
         {
-            if (!await ProcessArguments(context, args))
+            if (!Validate(parseResult.CommandResult, context.Response).IsValid)
             {
                 return context.Response;
             }
-
             var appConfigService = context.GetService<IAppConfigService>();
             await appConfigService.UnlockKeyValue(
-                args.Account!,
-                args.Key!,
-                args.Subscription!,
-                args.Tenant,
-                args.RetryPolicy,
-                args.Label);
+                options.Account!,
+                options.Key!,
+                options.Subscription!,
+                options.Tenant,
+                options.RetryPolicy,
+                options.Label);
 
             context.Response.Results =
                 ResponseResult.Create(
-                    new KeyValueUnlockResult(args.Key, args.Label),
+                    new KeyValueUnlockResult(options.Key, options.Label),
                     AppConfigJsonContext.Default.KeyValueUnlockResult);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "An exception occurred unlocking key. Key: {Key}.", args.Key);
+            _logger.LogError(ex, "An exception occurred unlocking key. Key: {Key}.", options.Key);
             HandleException(context.Response, ex);
         }
 

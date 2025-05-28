@@ -1,21 +1,17 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.CommandLine;
-using System.CommandLine.Parsing;
-using AzureMcp.Arguments.AppConfig.KeyValue;
-using AzureMcp.Models.Argument;
-using AzureMcp.Models.Command;
+using AzureMcp.Models.Option;
+using AzureMcp.Options.AppConfig.KeyValue;
 using AzureMcp.Services.Interfaces;
 using Microsoft.Extensions.Logging;
-using ModelContextProtocol.Server;
 
 namespace AzureMcp.Commands.AppConfig.KeyValue;
 
-public sealed class KeyValueSetCommand(ILogger<KeyValueSetCommand> logger) : BaseKeyValueCommand<KeyValueSetArguments>()
+public sealed class KeyValueSetCommand(ILogger<KeyValueSetCommand> logger) : BaseKeyValueCommand<KeyValueSetOptions>()
 {
     private const string _commandTitle = "Set App Configuration Key-Value Setting";
-    private readonly Option<string> _valueOption = ArgumentDefinitions.AppConfig.Value.ToOption();
+    private readonly Option<string> _valueOption = OptionDefinitions.AppConfig.Value;
     private readonly ILogger<KeyValueSetCommand> _logger = logger;
 
     public override string Name => "set";
@@ -35,55 +31,43 @@ public sealed class KeyValueSetCommand(ILogger<KeyValueSetCommand> logger) : Bas
         command.AddOption(_valueOption);
     }
 
-    protected override void RegisterArguments()
+    protected override KeyValueSetOptions BindOptions(ParseResult parseResult)
     {
-        base.RegisterArguments();
-        AddArgument(CreateValueArgument());
+        var options = base.BindOptions(parseResult);
+        options.Value = parseResult.GetValueForOption(_valueOption);
+        return options;
     }
-
-    protected override KeyValueSetArguments BindArguments(ParseResult parseResult)
-    {
-        var args = base.BindArguments(parseResult);
-        args.Value = parseResult.GetValueForOption(_valueOption);
-        return args;
-    }
-
-    private static ArgumentBuilder<KeyValueSetArguments> CreateValueArgument() =>
-        ArgumentBuilder<KeyValueSetArguments>
-            .Create(ArgumentDefinitions.AppConfig.Value.Name, ArgumentDefinitions.AppConfig.Value.Description)
-            .WithValueAccessor(args => args.Value ?? string.Empty)
-            .WithIsRequired(ArgumentDefinitions.AppConfig.Value.Required);
 
     [McpServerTool(Destructive = false, ReadOnly = false, Title = _commandTitle)]
     public override async Task<CommandResponse> ExecuteAsync(CommandContext context, ParseResult parseResult)
     {
-        var args = BindArguments(parseResult);
+        var options = BindOptions(parseResult);
 
         try
         {
-            if (!await ProcessArguments(context, args))
+            if (!Validate(parseResult.CommandResult, context.Response).IsValid)
             {
                 return context.Response;
             }
 
             var appConfigService = context.GetService<IAppConfigService>();
             await appConfigService.SetKeyValue(
-                args.Account!,
-                args.Key!,
-                args.Value!,
-                args.Subscription!,
-                args.Tenant,
-                args.RetryPolicy,
-                args.Label);
+                options.Account!,
+                options.Key!,
+                options.Value!,
+                options.Subscription!,
+                options.Tenant,
+                options.RetryPolicy,
+                options.Label);
 
             context.Response.Results = ResponseResult.Create(
-                new KeyValueSetCommandResult(args.Key, args.Value, args.Label),
+                new KeyValueSetCommandResult(options.Key, options.Value, options.Label),
                 AppConfigJsonContext.Default.KeyValueSetCommandResult
             );
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "An exception occurred setting value. Key: {Key}.", args.Key);
+            _logger.LogError(ex, "An exception occurred setting value. Key: {Key}.", options.Key);
             HandleException(context.Response, ex);
         }
 

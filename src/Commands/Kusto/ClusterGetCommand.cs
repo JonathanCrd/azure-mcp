@@ -1,16 +1,13 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.CommandLine.Parsing;
-using AzureMcp.Arguments.Kusto;
-using AzureMcp.Models.Command;
+using AzureMcp.Options.Kusto;
 using AzureMcp.Services.Interfaces;
 using Microsoft.Extensions.Logging;
-using ModelContextProtocol.Server;
 
 namespace AzureMcp.Commands.Kusto;
 
-public sealed class ClusterGetCommand : BaseClusterCommand<ClusterGetArguments>
+public sealed class ClusterGetCommand : BaseClusterCommand<ClusterGetOptions>
 {
     private const string _commandTitle = "Get Kusto Cluster Details";
     private readonly ILogger<ClusterGetCommand> _logger;
@@ -33,26 +30,28 @@ public sealed class ClusterGetCommand : BaseClusterCommand<ClusterGetArguments>
     [McpServerTool(Destructive = false, ReadOnly = true)]
     public override async Task<CommandResponse> ExecuteAsync(CommandContext context, ParseResult parseResult)
     {
-        var args = BindArguments(parseResult);
+        var options = BindOptions(parseResult);
 
         try
         {
-            if (!await ProcessArguments(context, args))
+            if (!Validate(parseResult.CommandResult, context.Response).IsValid)
+            {
                 return context.Response;
+            }
 
             var kusto = context.GetService<IKustoService>();
             var cluster = await kusto.GetCluster(
-                args.Subscription!,
-                args.ClusterName!,
-                args.Tenant,
-                args.RetryPolicy);
+                options.Subscription!,
+                options.ClusterName!,
+                options.Tenant,
+                options.RetryPolicy);
 
             context.Response.Results = cluster is null ?
             null : ResponseResult.Create(new ClusterGetCommandResult(cluster), KustoJsonContext.Default.ClusterGetCommandResult);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "An exception occurred getting Kusto cluster details. Cluster: {Cluster}.", args.ClusterName);
+            _logger.LogError(ex, "An exception occurred getting Kusto cluster details. Cluster: {Cluster}.", options.ClusterName);
             HandleException(context.Response, ex);
         }
 

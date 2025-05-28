@@ -1,16 +1,13 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.CommandLine.Parsing;
-using AzureMcp.Arguments.AppConfig.KeyValue;
-using AzureMcp.Models.Command;
+using AzureMcp.Options.AppConfig.KeyValue;
 using AzureMcp.Services.Interfaces;
 using Microsoft.Extensions.Logging;
-using ModelContextProtocol.Server;
 
 namespace AzureMcp.Commands.AppConfig.KeyValue;
 
-public sealed class KeyValueLockCommand(ILogger<KeyValueLockCommand> logger) : BaseKeyValueCommand<KeyValueLockArguments>()
+public sealed class KeyValueLockCommand(ILogger<KeyValueLockCommand> logger) : BaseKeyValueCommand<KeyValueLockOptions>()
 {
     private const string _commandTitle = "Lock App Configuration Key-Value Setting";
     private readonly ILogger<KeyValueLockCommand> _logger = logger;
@@ -29,32 +26,32 @@ public sealed class KeyValueLockCommand(ILogger<KeyValueLockCommand> logger) : B
     [McpServerTool(Destructive = false, ReadOnly = false, Title = _commandTitle)]
     public override async Task<CommandResponse> ExecuteAsync(CommandContext context, ParseResult parseResult)
     {
-        var args = BindArguments(parseResult);
+        var options = BindOptions(parseResult);
 
         try
         {
-            if (!await ProcessArguments(context, args))
+            if (!Validate(parseResult.CommandResult, context.Response).IsValid)
             {
                 return context.Response;
             }
 
             var appConfigService = context.GetService<IAppConfigService>();
             await appConfigService.LockKeyValue(
-                args.Account!,
-                args.Key!,
-                args.Subscription!,
-                args.Tenant,
-                args.RetryPolicy,
-                args.Label);
+                options.Account!,
+                options.Key!,
+                options.Subscription!,
+                options.Tenant,
+                options.RetryPolicy,
+                options.Label);
 
             context.Response.Results =
                 ResponseResult.Create(
-                    new KeyValueLockCommandResult(args.Key, args.Label),
+                    new KeyValueLockCommandResult(options.Key, options.Label),
                     AppConfigJsonContext.Default.KeyValueLockCommandResult);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "An exception occurred locking value. Key: {Key}, Label: {Label}", args.Key, args.Label);
+            _logger.LogError(ex, "An exception occurred locking value. Key: {Key}, Label: {Label}", options.Key, options.Label);
             HandleException(context.Response, ex);
         }
 

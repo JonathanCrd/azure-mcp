@@ -1,16 +1,13 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.CommandLine.Parsing;
-using AzureMcp.Arguments.Kusto;
-using AzureMcp.Models.Command;
+using AzureMcp.Options.Kusto;
 using AzureMcp.Services.Interfaces;
 using Microsoft.Extensions.Logging;
-using ModelContextProtocol.Server;
 
 namespace AzureMcp.Commands.Kusto;
 
-public sealed class DatabaseListCommand : BaseClusterCommand<DatabaseListArguments>
+public sealed class DatabaseListCommand : BaseClusterCommand<DatabaseListOptions>
 {
     private const string _commandTitle = "List Kusto Databases";
     private readonly ILogger<DatabaseListCommand> _logger;
@@ -32,32 +29,35 @@ public sealed class DatabaseListCommand : BaseClusterCommand<DatabaseListArgumen
     [McpServerTool(Destructive = false, ReadOnly = true, Title = _commandTitle)]
     public override async Task<CommandResponse> ExecuteAsync(CommandContext context, ParseResult parseResult)
     {
-        var args = BindArguments(parseResult);
+        var options = BindOptions(parseResult);
+
         try
         {
-            if (!await ProcessArguments(context, args))
+            if (!Validate(parseResult.CommandResult, context.Response).IsValid)
+            {
                 return context.Response;
+            }
 
             var kusto = context.GetService<IKustoService>();
 
             List<string> databasesNames = [];
 
-            if (UseClusterUri(args))
+            if (UseClusterUri(options))
             {
                 databasesNames = await kusto.ListDatabases(
-                    args.ClusterUri!,
-                    args.Tenant,
-                    args.AuthMethod,
-                    args.RetryPolicy);
+                    options.ClusterUri!,
+                    options.Tenant,
+                    options.AuthMethod,
+                    options.RetryPolicy);
             }
             else
             {
                 databasesNames = await kusto.ListDatabases(
-                    args.Subscription!,
-                    args.ClusterName!,
-                    args.Tenant,
-                    args.AuthMethod,
-                    args.RetryPolicy);
+                    options.Subscription!,
+                    options.ClusterName!,
+                    options.Tenant,
+                    options.AuthMethod,
+                    options.RetryPolicy);
             }
 
             context.Response.Results = databasesNames?.Count > 0 ?
@@ -66,7 +66,7 @@ public sealed class DatabaseListCommand : BaseClusterCommand<DatabaseListArgumen
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "An exception occurred listing databases. Cluster: {Cluster}.", args.ClusterUri ?? args.ClusterName);
+            _logger.LogError(ex, "An exception occurred listing databases. Cluster: {Cluster}.", options.ClusterUri ?? options.ClusterName);
             HandleException(context.Response, ex);
         }
         return context.Response;

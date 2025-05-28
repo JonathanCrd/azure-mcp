@@ -1,28 +1,20 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.CommandLine;
-using System.CommandLine.Parsing;
-using AzureMcp.Models.Argument;
-using AzureMcp.Models.Command;
 
 namespace AzureMcp.Commands;
 
 public abstract class BaseCommand : IBaseCommand
 {
-    protected readonly HashSet<string> _registeredArgumentNames = [];
-    protected readonly List<ArgumentDefinition<string>> _arguments = [];
-
-    private readonly Command? _command;
+    private readonly Command _command;
 
     protected BaseCommand()
     {
         _command = new Command(Name, Description);
         RegisterOptions(_command);
-        RegisterArguments();
     }
 
-    public Command GetCommand() => _command ?? throw new InvalidOperationException("Command not initialized");
+    public Command GetCommand() => _command;
 
     public abstract string Name { get; }
     public abstract string Description { get; }
@@ -30,25 +22,20 @@ public abstract class BaseCommand : IBaseCommand
 
     protected virtual void RegisterOptions(Command command)
     {
-        // Base implementation is empty, derived classes will add their options
     }
 
-    protected virtual void RegisterArguments()
-    {
-        // Base implementation is empty, but derived classes must explicitly call base
-    }
-
-    public abstract Task<CommandResponse> ExecuteAsync(CommandContext context, ParseResult commandOptions);
+    public abstract Task<CommandResponse> ExecuteAsync(CommandContext context, ParseResult parseResult);
 
     protected virtual void HandleException(CommandResponse response, Exception ex)
     {
-        // Don't clear arguments when handling exceptions
+        var result = new ExceptionResult(
+            Message: ex.Message,
+            StackTrace: ex.StackTrace,
+            Type: ex.GetType().Name);
+
         response.Status = GetStatusCode(ex);
         response.Message = GetErrorMessage(ex) + ". To mitigate this issue, please refer to the troubleshooting guidelines here at https://aka.ms/azmcp/troubleshooting.";
-        response.Results = ResponseResult.Create(new ExceptionResult(
-            ex.Message,
-            ex.StackTrace,
-            ex.GetType().Name), JsonSourceGenerationContext.Default.ExceptionResult);
+        response.Results = ResponseResult.Create(result, JsonSourceGenerationContext.Default.ExceptionResult);
     }
 
     internal record ExceptionResult(
@@ -60,15 +47,29 @@ public abstract class BaseCommand : IBaseCommand
 
     protected virtual int GetStatusCode(Exception ex) => 500;
 
-    public IEnumerable<ArgumentDefinition<string>>? GetArguments() => _arguments;
-
-    public void ClearArguments() => _arguments.Clear();
-
-    public virtual void AddArgument(ArgumentDefinition<string> argument)
+    public virtual ValidationResult Validate(CommandResult commandResult, CommandResponse? commandResponse = null)
     {
-        if (argument != null && _registeredArgumentNames.Add(argument.Name))
+        var result = new ValidationResult { IsValid = true };
+
+        var missingOptions = commandResult.Command.Options
+            .Where(o => o.IsRequired && commandResult.GetValueForOption(o) == null)
+            .Select(o => $"--{o.Name}")
+            .ToList();
+
+        if (missingOptions.Count > 0 || !string.IsNullOrEmpty(commandResult.ErrorMessage))
         {
-            _arguments.Add(argument);
+            result.IsValid = false;
+            result.ErrorMessage = missingOptions.Count > 0
+                ? $"Missing Required options: {string.Join(", ", missingOptions)}"
+                : commandResult.ErrorMessage;
+
+            if (commandResponse != null && !result.IsValid)
+            {
+                commandResponse.Status = 400;
+                commandResponse.Message = result.ErrorMessage!;
+            }
         }
+
+        return result;
     }
 }

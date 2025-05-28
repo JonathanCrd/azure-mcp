@@ -1,6 +1,7 @@
-using System.Text.Json;
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 using System.Text.Json.Serialization;
-using Azure.Search.Documents.Indexes.Models;
 using AzureMcp.Commands.Search.Index;
 using AzureMcp.Commands.Search.Service;
 

@@ -1,18 +1,16 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.CommandLine.Parsing;
-using AzureMcp.Arguments.Group;
-using AzureMcp.Models.Argument;
-using AzureMcp.Models.Command;
+using AzureMcp.Commands.Subscription;
+using AzureMcp.Models.Option;
 using AzureMcp.Models.ResourceGroup;
+using AzureMcp.Options.Group;
 using AzureMcp.Services.Interfaces;
 using Microsoft.Extensions.Logging;
-using ModelContextProtocol.Server;
 
 namespace AzureMcp.Commands.Group;
 
-public sealed class GroupListCommand(ILogger<GroupListCommand> logger) : SubscriptionCommand<BaseGroupArguments>()
+public sealed class GroupListCommand(ILogger<GroupListCommand> logger) : SubscriptionCommand<BaseGroupOptions>()
 {
     private const string _commandTitle = "List Resource Groups";
     private readonly ILogger<GroupListCommand> _logger = logger;
@@ -22,7 +20,7 @@ public sealed class GroupListCommand(ILogger<GroupListCommand> logger) : Subscri
     public override string Description =>
         $"""
         List all resource groups in a subscription. This command retrieves all resource groups available
-        in the specified {ArgumentDefinitions.Common.SubscriptionName}. Results include resource group names and IDs,
+        in the specified {OptionDefinitions.Common.SubscriptionName}. Results include resource group names and IDs,
         returned as a JSON array.
         """;
 
@@ -31,20 +29,20 @@ public sealed class GroupListCommand(ILogger<GroupListCommand> logger) : Subscri
     [McpServerTool(Destructive = false, ReadOnly = true, Title = _commandTitle)]
     public override async Task<CommandResponse> ExecuteAsync(CommandContext context, ParseResult parseResult)
     {
-        var args = BindArguments(parseResult);
+        var options = BindOptions(parseResult);
 
         try
         {
-            if (!await ProcessArguments(context, args))
+            if (!Validate(parseResult.CommandResult, context.Response).IsValid)
             {
                 return context.Response;
             }
 
             var resourceGroupService = context.GetService<IResourceGroupService>();
             var groups = await resourceGroupService.GetResourceGroups(
-                args.Subscription!,
-                args.Tenant,
-                args.RetryPolicy);
+                options.Subscription!,
+                options.Tenant,
+                options.RetryPolicy);
 
             context.Response.Results = groups?.Count > 0 ?
                 ResponseResult.Create(new Result(groups), JsonSourceGenerationContext.Default.Result) :

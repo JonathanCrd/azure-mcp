@@ -1,17 +1,13 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.CommandLine.Parsing;
-using AzureMcp.Arguments.Storage.Table;
-using AzureMcp.Models;
-using AzureMcp.Models.Command;
+using AzureMcp.Options.Storage.Table;
 using AzureMcp.Services.Interfaces;
 using Microsoft.Extensions.Logging;
-using ModelContextProtocol.Server;
 
 namespace AzureMcp.Commands.Storage.Table;
 
-public sealed class TableListCommand(ILogger<TableListCommand> logger) : BaseStorageCommand<TableListArguments>()
+public sealed class TableListCommand(ILogger<TableListCommand> logger) : BaseStorageCommand<TableListOptions>()
 {
     private const string _commandTitle = "List Storage Tables";
     private readonly ILogger<TableListCommand> _logger = logger;
@@ -28,25 +24,25 @@ public sealed class TableListCommand(ILogger<TableListCommand> logger) : BaseSto
     public override string Title => _commandTitle;
 
     [McpServerTool(Destructive = false, ReadOnly = true, Title = _commandTitle)]
-    public override async Task<CommandResponse> ExecuteAsync(CommandContext context, ParseResult commandOptions)
+    public override async Task<CommandResponse> ExecuteAsync(CommandContext context, ParseResult parseResult)
     {
-        var args = BindArguments(commandOptions);
+        var options = BindOptions(parseResult);
 
         try
         {
-            if (!await ProcessArguments(context, args))
+            if (!Validate(parseResult.CommandResult, context.Response).IsValid)
             {
                 return context.Response;
             }
 
             var storageService = context.GetService<IStorageService>();
             var tables = await storageService.ListTables(
-                args.Account!,
-                args.Subscription!,
-                args.AuthMethod ?? AuthMethod.Credential,
+                options.Account!,
+                options.Subscription!,
+                options.AuthMethod ?? AuthMethod.Credential,
                 null,
-                args.Tenant,
-                args.RetryPolicy);
+                options.Tenant,
+                options.RetryPolicy);
 
             context.Response.Results = tables?.Count > 0
                 ? ResponseResult.Create(new TableListCommandResult(tables), StorageJsonContext.Default.TableListCommandResult)
@@ -55,7 +51,7 @@ public sealed class TableListCommand(ILogger<TableListCommand> logger) : BaseSto
             // Only show warning if we actually had to fall back to a different auth method
             if (context.Response.Results is not null && !string.IsNullOrEmpty(context.Response.Message))
             {
-                var authMethod = args.AuthMethod ?? AuthMethod.Credential;
+                var authMethod = options.AuthMethod ?? AuthMethod.Credential;
                 context.Response.Message = authMethod switch
                 {
                     AuthMethod.Credential when context.Response.Message.Contains("connection string") =>
@@ -74,7 +70,7 @@ public sealed class TableListCommand(ILogger<TableListCommand> logger) : BaseSto
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error listing tables. Account: {Account}.", args.Account);
+            _logger.LogError(ex, "Error listing tables. Account: {Account}.", options.Account);
             HandleException(context.Response, ex);
         }
 

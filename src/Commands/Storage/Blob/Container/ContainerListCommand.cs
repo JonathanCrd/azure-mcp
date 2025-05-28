@@ -1,16 +1,14 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.CommandLine.Parsing;
-using AzureMcp.Arguments.Storage.Blob.Container;
-using AzureMcp.Models.Command;
+using AzureMcp.Models.Option;
+using AzureMcp.Options.Storage.Blob.Container;
 using AzureMcp.Services.Interfaces;
 using Microsoft.Extensions.Logging;
-using ModelContextProtocol.Server;
 
 namespace AzureMcp.Commands.Storage.Blob.Container;
 
-public sealed class ContainerListCommand(ILogger<ContainerListCommand> logger) : BaseStorageCommand<ContainerListArguments>()
+public sealed class ContainerListCommand(ILogger<ContainerListCommand> logger) : BaseStorageCommand<ContainerListOptions>()
 {
     private const string _commandTitle = "List Storage Containers";
     private readonly ILogger<ContainerListCommand> _logger = logger;
@@ -21,29 +19,29 @@ public sealed class ContainerListCommand(ILogger<ContainerListCommand> logger) :
         $"""
         List all containers in a Storage account. This command retrieves and displays all containers available
         in the specified account. Results include container names and are returned as a JSON array.
-        Requires {Models.Argument.ArgumentDefinitions.Storage.AccountName}.
+        Requires {OptionDefinitions.Storage.AccountName}.
         """;
 
     public override string Title => _commandTitle;
 
     [McpServerTool(Destructive = false, ReadOnly = true, Title = _commandTitle)]
-    public override async Task<CommandResponse> ExecuteAsync(CommandContext context, ParseResult commandOptions)
+    public override async Task<CommandResponse> ExecuteAsync(CommandContext context, ParseResult parseResult)
     {
-        var args = BindArguments(commandOptions);
+        var options = BindOptions(parseResult);
 
         try
         {
-            if (!await ProcessArguments(context, args))
+            if (!Validate(parseResult.CommandResult, context.Response).IsValid)
             {
                 return context.Response;
             }
 
             var storageService = context.GetService<IStorageService>();
             var containers = await storageService.ListContainers(
-                args.Account!,
-                args.Subscription!,
-                args.Tenant,
-                args.RetryPolicy);
+                options.Account!,
+                options.Subscription!,
+                options.Tenant,
+                options.RetryPolicy);
 
             context.Response.Results = containers?.Count > 0
                 ? ResponseResult.Create(
@@ -53,7 +51,7 @@ public sealed class ContainerListCommand(ILogger<ContainerListCommand> logger) :
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error listing containers. Account: {Account}.", args.Account);
+            _logger.LogError(ex, "Error listing containers. Account: {Account}.", options.Account);
             HandleException(context.Response, ex);
         }
 

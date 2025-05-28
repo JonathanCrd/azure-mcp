@@ -1,19 +1,17 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.CommandLine.Parsing;
-using AzureMcp.Arguments.Redis.CacheForRedis;
-using AzureMcp.Models.Command;
+using AzureMcp.Commands.Subscription;
+using AzureMcp.Options.Redis.CacheForRedis;
 using AzureMcp.Services.Interfaces;
 using Microsoft.Extensions.Logging;
-using ModelContextProtocol.Server;
 
 namespace AzureMcp.Commands.Redis.CacheForRedis;
 
 /// <summary>
 /// Lists Azure Cache for Redis resources (Basic, Standard, and Premium tier caches) in the specified subscription.
 /// </summary>
-public sealed class CacheListCommand(ILogger<CacheListCommand> logger) : SubscriptionCommand<CacheListArguments>()
+public sealed class CacheListCommand(ILogger<CacheListCommand> logger) : SubscriptionCommand<CacheListOptions>()
 {
     private const string _commandTitle = "List Redis Caches";
     private readonly ILogger<CacheListCommand> _logger = logger;
@@ -31,20 +29,21 @@ public sealed class CacheListCommand(ILogger<CacheListCommand> logger) : Subscri
     [McpServerTool(Destructive = false, ReadOnly = true, Title = _commandTitle)]
     public override async Task<CommandResponse> ExecuteAsync(CommandContext context, ParseResult parseResult)
     {
+        var options = BindOptions(parseResult);
+
         try
         {
-            var args = BindArguments(parseResult);
-            if (!await ProcessArguments(context, args))
+            if (!Validate(parseResult.CommandResult, context.Response).IsValid)
             {
                 return context.Response;
             }
 
             var redisService = context.GetService<IRedisService>() ?? throw new InvalidOperationException("Redis service is not available.");
             var caches = await redisService.ListCachesAsync(
-                args.Subscription!,
-                args.Tenant,
-                args.AuthMethod,
-                args.RetryPolicy);
+                options.Subscription!,
+                options.Tenant,
+                options.AuthMethod,
+                options.RetryPolicy);
 
             context.Response.Results = caches.Any() ?
                 ResponseResult.Create(

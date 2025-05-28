@@ -1,34 +1,29 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.CommandLine;
-using System.CommandLine.Parsing;
 using System.Text.Json.Nodes;
-using AzureMcp.Arguments.Cosmos;
-using AzureMcp.Models;
-using AzureMcp.Models.Argument;
-using AzureMcp.Models.Command;
+using AzureMcp.Models.Option;
+using AzureMcp.Options.Cosmos;
 using AzureMcp.Services.Interfaces;
 using Microsoft.Extensions.Logging;
-using ModelContextProtocol.Server;
 
 namespace AzureMcp.Commands.Cosmos;
 
-public sealed class ItemQueryCommand(ILogger<ItemQueryCommand> logger) : BaseContainerCommand<ItemQueryArguments>()
+public sealed class ItemQueryCommand(ILogger<ItemQueryCommand> logger) : BaseContainerCommand<ItemQueryOptions>()
 {
     private const string _commandTitle = "Query Cosmos DB Container";
     private readonly ILogger<ItemQueryCommand> _logger = logger;
     private const string DefaultQuery = "SELECT * FROM c";
 
-    private readonly Option<string> _queryOption = ArgumentDefinitions.Cosmos.Query.ToOption();
+    private readonly Option<string> _queryOption = OptionDefinitions.Cosmos.Query;
 
     public override string Name => "query";
 
     public override string Description =>
         $"""
-        Execute a SQL query against items in a Cosmos DB container. Requires {ArgumentDefinitions.Cosmos.AccountName},
-        {ArgumentDefinitions.Cosmos.DatabaseName}, and {ArgumentDefinitions.Cosmos.ContainerName}.
-        The {ArgumentDefinitions.Cosmos.QueryText} parameter accepts SQL query syntax. Results are returned as a
+        Execute a SQL query against items in a Cosmos DB container. Requires {OptionDefinitions.Cosmos.AccountName},
+        {OptionDefinitions.Cosmos.DatabaseName}, and {OptionDefinitions.Cosmos.ContainerName}.
+        The {OptionDefinitions.Cosmos.QueryText} parameter accepts SQL query syntax. Results are returned as a
         JSON array of documents.
         """;
 
@@ -40,48 +35,35 @@ public sealed class ItemQueryCommand(ILogger<ItemQueryCommand> logger) : BaseCon
         command.AddOption(_queryOption);
     }
 
-    protected override void RegisterArguments()
+    protected override ItemQueryOptions BindOptions(ParseResult parseResult)
     {
-        base.RegisterArguments();
-        AddArgument(CreateQueryArgument());
-    }
-
-    private static ArgumentBuilder<ItemQueryArguments> CreateQueryArgument() =>
-        ArgumentBuilder<ItemQueryArguments>
-            .Create(ArgumentDefinitions.Cosmos.Query.Name, ArgumentDefinitions.Cosmos.Query.Description)
-            .WithValueAccessor(args => args.Query ?? string.Empty)
-            .WithDefaultValue(ArgumentDefinitions.Cosmos.Query.DefaultValue ?? DefaultQuery)
-            .WithIsRequired(ArgumentDefinitions.Cosmos.Query.Required);
-
-    protected override ItemQueryArguments BindArguments(ParseResult parseResult)
-    {
-        var args = base.BindArguments(parseResult);
-        args.Query = parseResult.GetValueForOption(_queryOption);
-        return args;
+        var options = base.BindOptions(parseResult);
+        options.Query = parseResult.GetValueForOption(_queryOption);
+        return options;
     }
 
     [McpServerTool(Destructive = false, ReadOnly = true, Title = _commandTitle)]
     public override async Task<CommandResponse> ExecuteAsync(CommandContext context, ParseResult parseResult)
     {
-        var args = BindArguments(parseResult);
+        var options = BindOptions(parseResult);
 
         try
         {
-            if (!await ProcessArguments(context, args))
+            if (!Validate(parseResult.CommandResult, context.Response).IsValid)
             {
                 return context.Response;
             }
 
             var cosmosService = context.GetService<ICosmosService>();
             var items = await cosmosService.QueryItems(
-                args.Account!,
-                args.Database!,
-                args.Container!,
-                args.Query ?? DefaultQuery,
-                args.Subscription!,
-                args.AuthMethod ?? AuthMethod.Credential,
-                args.Tenant,
-                args.RetryPolicy);
+                options.Account!,
+                options.Database!,
+                options.Container!,
+                options.Query ?? DefaultQuery,
+                options.Subscription!,
+                options.AuthMethod ?? AuthMethod.Credential,
+                options.Tenant,
+                options.RetryPolicy);
 
             context.Response.Results = items?.Count > 0 ?
                 ResponseResult.Create(new ItemQueryCommandResult(items), CosmosJsonContext.Default.ItemQueryCommandResult) :
@@ -90,7 +72,7 @@ public sealed class ItemQueryCommand(ILogger<ItemQueryCommand> logger) : BaseCon
         catch (Exception ex)
         {
             _logger.LogError(ex, "An exception occurred querying container. Account: {Account}, Database: {Database},"
-                + " Container: {Container}", args.Account, args.Database, args.Container);
+                + " Container: {Container}", options.Account, options.Database, options.Container);
 
             HandleException(context.Response, ex);
         }

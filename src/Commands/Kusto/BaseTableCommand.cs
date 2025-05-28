@@ -1,19 +1,17 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.CommandLine;
-using System.CommandLine.Parsing;
 using System.Diagnostics.CodeAnalysis;
-using AzureMcp.Arguments.Kusto;
-using AzureMcp.Models.Argument;
+using AzureMcp.Models.Option;
+using AzureMcp.Options.Kusto;
 
 namespace AzureMcp.Commands.Kusto;
 
 public abstract class BaseTableCommand<
-    [DynamicallyAccessedMembers(TrimAnnotations.CommandAnnotations)] TArgs>
-    : BaseDatabaseCommand<TArgs> where TArgs : BaseTableArguments, new()
+    [DynamicallyAccessedMembers(TrimAnnotations.CommandAnnotations)] TOptions>
+    : BaseDatabaseCommand<TOptions> where TOptions : BaseTableOptions, new()
 {
-    protected readonly Option<string> _tableOption = ArgumentDefinitions.Kusto.Table.ToOption();
+    protected readonly Option<string> _tableOption = OptionDefinitions.Kusto.Table;
 
     protected override void RegisterOptions(Command command)
     {
@@ -21,23 +19,10 @@ public abstract class BaseTableCommand<
         command.AddOption(_tableOption);
     }
 
-    private static ArgumentBuilder<BaseTableArguments> CreateTableArgument() =>
-        ArgumentBuilder<BaseTableArguments>
-            .Create(ArgumentDefinitions.Kusto.Table.Name, ArgumentDefinitions.Kusto.Table.Description)
-            .WithValueAccessor(args => args.Table ?? string.Empty)
-            .WithIsRequired(true);
-
-
-    protected override void RegisterArguments()
+    protected override TOptions BindOptions(ParseResult parseResult)
     {
-        base.RegisterArguments();
-        AddArgument(CreateTableArgument());
-    }
-
-    protected override TArgs BindArguments(ParseResult parseResult)
-    {
-        var args = base.BindArguments(parseResult);
-        args.Table = parseResult.GetValueForOption(_tableOption);
-        return args;
+        var options = base.BindOptions(parseResult);
+        options.Table = parseResult.GetValueForOption(_tableOption);
+        return options;
     }
 }

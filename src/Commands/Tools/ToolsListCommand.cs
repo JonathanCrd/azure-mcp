@@ -1,12 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.CommandLine.Parsing;
-using AzureMcp.Models;
-using AzureMcp.Models.Argument;
-using AzureMcp.Models.Command;
+using AzureMcp.Models.Option;
 using Microsoft.Extensions.Logging;
-using ModelContextProtocol.Server;
 
 namespace AzureMcp.Commands.Tools;
 
@@ -52,9 +48,9 @@ public sealed class ToolsListCommand(ILogger<ToolsListCommand> logger) : BaseCom
     {
         var commandDetails = command.GetCommand();
 
-        var argumentInfos = commandDetails.Options?
+        var optionInfos = commandDetails.Options?
             .Where(arg => !arg.IsHidden)
-            .Select(arg => new ArgumentInfo(
+            .Select(arg => new OptionInfo(
                 name: arg.Name,
                 description: arg.Description!,
                 required: arg.IsRequired))
@@ -65,7 +61,7 @@ public sealed class ToolsListCommand(ILogger<ToolsListCommand> logger) : BaseCom
             Name = commandDetails.Name,
             Description = commandDetails.Description ?? string.Empty,
             Command = tokenizedName.Replace(CommandFactory.Separator, ' '),
-            Arguments = argumentInfos,
+            Options = optionInfos,
         };
     }
 }

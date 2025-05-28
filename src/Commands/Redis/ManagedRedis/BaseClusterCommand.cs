@@ -1,19 +1,18 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.CommandLine;
-using System.CommandLine.Parsing;
 using System.Diagnostics.CodeAnalysis;
-using AzureMcp.Arguments.Redis.ManagedRedis;
-using AzureMcp.Models.Argument;
+using AzureMcp.Commands.Subscription;
+using AzureMcp.Models.Option;
+using AzureMcp.Options.Redis.ManagedRedis;
 
 namespace AzureMcp.Commands.Redis.ManagedRedis;
 
 public abstract class BaseClusterCommand<
     [DynamicallyAccessedMembers(TrimAnnotations.CommandAnnotations)] T>
-    : SubscriptionCommand<T> where T : BaseClusterArguments, new()
+    : SubscriptionCommand<T> where T : BaseClusterOptions, new()
 {
-    protected readonly Option<string> _clusterOption = ArgumentDefinitions.Redis.Cluster.ToOption();
+    protected readonly Option<string> _clusterOption = OptionDefinitions.Redis.Cluster;
 
     protected override void RegisterOptions(Command command)
     {
@@ -22,24 +21,11 @@ public abstract class BaseClusterCommand<
         command.AddOption(_resourceGroupOption);
     }
 
-    protected override void RegisterArguments()
+    protected override T BindOptions(ParseResult parseResult)
     {
-        base.RegisterArguments();
-        AddArgument(CreateClusterArgument());
-        AddArgument(CreateResourceGroupArgument());
+        var options = base.BindOptions(parseResult);
+        options.Cluster = parseResult.GetValueForOption(_clusterOption);
+        options.ResourceGroup = parseResult.GetValueForOption(_resourceGroupOption) ?? "";
+        return options;
     }
-
-    protected override T BindArguments(ParseResult parseResult)
-    {
-        var args = base.BindArguments(parseResult);
-        args.Cluster = parseResult.GetValueForOption(_clusterOption);
-        args.ResourceGroup = parseResult.GetValueForOption(_resourceGroupOption) ?? ArgumentDefinitions.Common.ResourceGroup.DefaultValue;
-        return args;
-    }
-
-    protected ArgumentBuilder<T> CreateClusterArgument() =>
-        ArgumentBuilder<T>
-            .Create(ArgumentDefinitions.Redis.Cluster.Name, ArgumentDefinitions.Redis.Cluster.Description)
-            .WithValueAccessor(args => args.Cluster ?? string.Empty)
-            .WithIsRequired(ArgumentDefinitions.Redis.Cluster.Required);
 }

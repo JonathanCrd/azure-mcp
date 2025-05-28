@@ -1,4 +1,7 @@
-﻿using System.Text.Json;
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
+using System.Text.Json;
 using Azure.Security.KeyVault.Keys;
 using AzureMcp.Tests.Client.Helpers;
 using Xunit;

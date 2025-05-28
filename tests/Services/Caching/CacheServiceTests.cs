@@ -1,13 +1,9 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System;
-using System.Linq;
-using System.Threading.Tasks;
 using AzureMcp.Services.Caching;
 using AzureMcp.Services.Interfaces;
 using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Options;
 using Xunit;
 
 namespace AzureMcp.Tests.Services.Caching;
@@ -19,7 +15,7 @@ public class CacheServiceTests
 
     public CacheServiceTests()
     {
-        _memoryCache = new MemoryCache(Options.Create(new MemoryCacheOptions()));
+        _memoryCache = new MemoryCache(Microsoft.Extensions.Options.Options.Create(new MemoryCacheOptions()));
         _cacheService = new CacheService(_memoryCache);
     }
 

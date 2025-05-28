@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 using System.CommandLine;
 using System.CommandLine.Parsing;
 using System.Diagnostics;
@@ -100,7 +103,7 @@ public class DatabaseQueryCommandTests
 
         Assert.NotNull(response);
         Assert.Equal(400, response.Status);
-        Assert.Equal($"Missing required arguments: {missingParameter.TrimStart('-')}", response.Message);
+        Assert.Equal($"Missing Required options: {missingParameter}", response.Message);
     }
 
     private class DatabaseQueryResult

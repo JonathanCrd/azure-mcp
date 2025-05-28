@@ -1,8 +1,10 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 using System.CommandLine;
 using System.CommandLine.Parsing;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Azure.Storage.Sas;
 using AzureMcp.Commands.Postgres.Database;
 using AzureMcp.Models.Command;
 using AzureMcp.Services.Interfaces;
@@ -107,7 +109,7 @@ public class DatabaseListCommandTests
 
         Assert.NotNull(response);
         Assert.Equal(400, response.Status);
-        Assert.Equal($"Missing required arguments: {missingParameter.TrimStart('-')}", response.Message);
+        Assert.Equal($"Missing Required options: {missingParameter}", response.Message);
     }
 
 
