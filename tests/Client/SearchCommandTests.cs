@@ -24,7 +24,6 @@ public class SearchCommandTests(LiveTestFixture liveTestFixture, ITestOutputHelp
 
         var servicesArray = result.AssertProperty("services");
         Assert.Equal(JsonValueKind.Array, servicesArray.ValueKind);
-        Assert.NotNull(servicesArray);
     }
 
     [Fact]
@@ -42,7 +41,6 @@ public class SearchCommandTests(LiveTestFixture liveTestFixture, ITestOutputHelp
 
         var indexesArray = result.AssertProperty("indexes");
         Assert.Equal(JsonValueKind.Array, indexesArray.ValueKind);
-        Assert.NotNull(indexesArray);
     }
 
     [Fact]
@@ -61,7 +59,6 @@ public class SearchCommandTests(LiveTestFixture liveTestFixture, ITestOutputHelp
 
         var index = result.AssertProperty("index");
         Assert.Equal(JsonValueKind.Object, index.ValueKind);
-        Assert.NotNull(index);
     }
 
     [Fact(Skip = "Requires populated index and queryable data")]
