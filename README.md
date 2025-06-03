@@ -77,7 +77,7 @@ The Azure MCP Server provides tools for interacting with the following Azure ser
 - List and get schema for tables.
 - List, get configuration and get parameters for servers.
 
-### 🧮 Kusto (Azure Data Explorer)
+### 🧮 Azure Data Explorer
 - List Kusto clusters
 - List databases in a Kusto cluster
 - List tables in a Kusto database
@@ -151,6 +151,12 @@ The Azure MCP Server provides Azure SDK and Azure CLI developer tools. It can be
 4. Open VS Code in an empty folder
 
 ### Installation
+
+#### Getting Started Video
+
+Here's a short (16 seconds) video to help you get the Azure MCP Server installed in VS Code.
+
+https://github.com/user-attachments/assets/535f393c-0ed2-479d-9b24-5ca933293c92
 
 #### ✨ One-Click Install
 

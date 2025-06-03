@@ -1,6 +1,6 @@
 # Release History
 
-## 0.1.1 (Unreleased)
+## 0.1.3 (Unreleased)
 
 ### Features Added
 
@@ -8,7 +8,25 @@
 
 ### Bugs Fixed
 
+- Monitor Query Logs Failing.  Fixed with https://github.com/Azure/azure-mcp/pull/280
+
 ### Other Changes
+
+## 0.1.2 (2025-06-03)
+
+### Bugs Fixed
+
+- Monitor Query Logs Failing.  Fixed with https://github.com/Azure/azure-mcp/pull/280
+
+## 0.1.1 (2025-05-30)
+
+### Bugs Fixed
+
+- Fixed return value of `tools/list` to use JSON object names. https://github.com/Azure/azure-mcp/pull/275
+
+### Other Changes
+
+- Update .NET SDK version to 9.0.300 https://github.com/Azure/azure-mcp/pull/278
 
 ## 0.1.0 (2025-05-28)
 
