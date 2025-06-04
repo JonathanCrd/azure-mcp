@@ -138,10 +138,10 @@ public class CosmosCommandTests(LiveTestFixture liveTestFixture, ITestOutputHelp
         Assert.True(contEnum.Any());
 
         // The agent will choose one, for this test we're going to take the first one
-        var firstConainter = contEnum.First();
-        string containerName = firstConainter.ValueKind == JsonValueKind.Object
-            ? firstConainter.GetProperty("name").GetString()!
-            : firstConainter.GetString()!;
+        var firstContainer = contEnum.First();
+        string containerName = firstContainer.ValueKind == JsonValueKind.Object
+            ? firstContainer.GetProperty("name").GetString()!
+            : firstContainer.GetString()!;
         Assert.False(string.IsNullOrEmpty(containerName));
 
         var itemResult = await CallToolAsync(
