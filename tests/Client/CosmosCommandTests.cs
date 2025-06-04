@@ -2,7 +2,11 @@
 // Licensed under the MIT License.
 
 using System.Text.Json;
+using Azure;
+using Azure.Identity;
+using AzureMcp.Models.Redis.ManagedRedis;
 using AzureMcp.Tests.Client.Helpers;
+using Microsoft.Azure.Cosmos;
 using Xunit;
 
 namespace AzureMcp.Tests.Client;
@@ -11,6 +15,30 @@ public class CosmosCommandTests(LiveTestFixture liveTestFixture, ITestOutputHelp
     : CommandTestsBase(liveTestFixture, output),
     IClassFixture<LiveTestFixture>
 {
+    private record ToDoItem(
+        string id,
+        string title,
+        bool completed
+    );
+
+    private async Task PopulateDB()
+    {
+        CosmosClient client = new(
+            accountEndpoint: $"https://{Settings.ResourceBaseName}.documents.azure.com:443/",
+            tokenCredential: new DefaultAzureCredential()
+        );
+
+        Container container = client.GetContainer("ToDoList", "Items");
+
+        // Create a new item to insert into the container
+        ToDoItem item = new ToDoItem(Guid.NewGuid().ToString(), "Test Task", false);
+
+        ItemResponse<ToDoItem> response = await container.UpsertItemAsync<ToDoItem>(
+            item: item,
+            partitionKey: new PartitionKey(item.id)
+        );
+    }
+
     [Fact]
     [Trait("Category", "Live")]
     public async Task Should_list_storage_accounts_by_subscription_id()
@@ -64,10 +92,14 @@ public class CosmosCommandTests(LiveTestFixture liveTestFixture, ITestOutputHelp
         Assert.NotEmpty(containersArray.EnumerateArray());
     }
 
-    [Fact(Skip = "Cosmos needs post script to add items")]
+    // [Fact(Skip = "Cosmos needs post script to add items")]
+    [Fact]
     [Trait("Category", "Live")]
     public async Task Should_query_cosmos_database_container_items()
     {
+        // Prepopulate the database with a test item
+        await PopulateDB();
+
         var result = await CallToolAsync(
             "azmcp-cosmos-database-container-item-query",
             new()
@@ -103,21 +135,27 @@ public class CosmosCommandTests(LiveTestFixture liveTestFixture, ITestOutputHelp
     [Trait("Category", "Live")]
     public async Task Should_show_single_item_from_cosmos_account()
     {
+        // Prepolate the database with a test item
+        await PopulateDB();
+
         // List all databases for the account
         var dbResult = await CallToolAsync(
-            "azmcp-cosmos-database-list",
-            new()
-            {
+                    "azmcp-cosmos-database-list",
+                    new()
+                    {
                 { "subscription", Settings.SubscriptionId },
                 { "account-name", Settings.ResourceBaseName }
-            });
+                    });
         var databases = dbResult.AssertProperty("databases");
         Assert.Equal(JsonValueKind.Array, databases.ValueKind);
         var dbEnum = databases.EnumerateArray();
         Assert.True(dbEnum.Any());
 
         // The agent will choose one, for this test we're going to take the first one
-        var dbName = dbEnum.First().GetProperty("name").GetString();
+        var firstDatabase = dbEnum.First();
+        string dbName = firstDatabase.ValueKind == JsonValueKind.Object
+            ? firstDatabase.GetProperty("name").GetString()!
+            : firstDatabase.GetString()!;
         Assert.False(string.IsNullOrEmpty(dbName));
 
         var containerResult = await CallToolAsync(
@@ -134,7 +172,10 @@ public class CosmosCommandTests(LiveTestFixture liveTestFixture, ITestOutputHelp
         Assert.True(contEnum.Any());
 
         // The agent will choose one, for this test we're going to take the first one
-        var containerName = contEnum.First().GetProperty("name").GetString();
+        var firstConainter = contEnum.First();
+        string containerName = firstConainter.ValueKind == JsonValueKind.Object
+            ? firstConainter.GetProperty("name").GetString()!
+            : firstConainter.GetString()!;
         Assert.False(string.IsNullOrEmpty(containerName));
 
         var itemResult = await CallToolAsync(
@@ -154,46 +195,43 @@ public class CosmosCommandTests(LiveTestFixture liveTestFixture, ITestOutputHelp
     [Fact]
     [Trait("Category", "Live")]
     public async Task Should_list_and_query_multiple_databases_and_containers()
-    {
-        // List all Cosmos DB accounts
-        var accountsResult = await CallToolAsync(
-            "azmcp-cosmos-account-list",
-            new() { { "subscription", Settings.SubscriptionId } });
-        var accounts = accountsResult.AssertProperty("accounts");
-        Assert.Equal(JsonValueKind.Array, accounts.ValueKind);
-        var accountEnum = accounts.EnumerateArray();
-        Assert.True(accountEnum.Any());
-        var accountName = accountEnum.First().GetProperty("name").GetString();
-        Assert.False(string.IsNullOrEmpty(accountName));
+    {     
+        // Prepopulate the database with a test item
+        await PopulateDB();
 
         // List all databases for the account
         var dbResult = await CallToolAsync(
             "azmcp-cosmos-database-list",
-            new() { { "subscription", Settings.SubscriptionId }, { "account-name", accountName! } });
+            new() { { "subscription", Settings.SubscriptionId }, { "account-name", Settings.ResourceBaseName } });
         var databases = dbResult.AssertProperty("databases");
         Assert.Equal(JsonValueKind.Array, databases.ValueKind);
-        var dbEnum = databases.EnumerateArray();
-        Assert.True(dbEnum.Any());
+        var databasesEnum = databases.EnumerateArray();
+        Assert.True(databasesEnum.Any());
 
-        foreach (var db in dbEnum)
+        foreach (var db in databasesEnum)
         {
-            var dbName = db.GetProperty("name").GetString();
+            string dbName = db.ValueKind == JsonValueKind.Object
+                ? db.GetProperty("name").GetString()!
+                : db.GetString()!;
             Assert.False(string.IsNullOrEmpty(dbName));
             // List containers for each database
             var containerResult = await CallToolAsync(
                 "azmcp-cosmos-database-container-list",
-                new() { { "subscription", Settings.SubscriptionId }, { "account-name", accountName! }, { "database-name", dbName! } });
+                new() { { "subscription", Settings.SubscriptionId }, { "account-name", Settings.ResourceBaseName! }, { "database-name", dbName! } });
             var containers = containerResult.AssertProperty("containers");
             Assert.Equal(JsonValueKind.Array, containers.ValueKind);
             var contEnum = containers.EnumerateArray();
+
             foreach (var container in contEnum)
             {
-                var containerName = container.GetProperty("name").GetString();
+                string containerName = container.ValueKind == JsonValueKind.Object
+                    ? container.GetProperty("name").GetString()!
+                    : container.GetString()!;
                 Assert.False(string.IsNullOrEmpty(containerName));
                 // Query items in each container (don't assert not empty, just check call works)
                 var itemResult = await CallToolAsync(
                     "azmcp-cosmos-database-container-item-query",
-                    new() { { "subscription", Settings.SubscriptionId }, { "account-name", accountName! }, { "database-name", dbName! }, { "container-name", containerName! } });
+                    new() { { "subscription", Settings.SubscriptionId }, { "account-name", Settings.ResourceBaseName! }, { "database-name", dbName! }, { "container-name", containerName! } });
                 var items = itemResult.AssertProperty("items");
                 Assert.Equal(JsonValueKind.Array, items.ValueKind);
             }
