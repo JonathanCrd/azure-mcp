@@ -105,7 +105,6 @@ public class CosmosCommandTests(LiveTestFixture liveTestFixture, ITestOutputHelp
     [Trait("Category", "Live")]
     public async Task Should_show_single_item_from_cosmos_account()
     {
-        // List all databases for the account
         var dbResult = await CallToolAsync(
                     "azmcp-cosmos-database-list",
                     new()
@@ -191,7 +190,7 @@ public class CosmosCommandTests(LiveTestFixture liveTestFixture, ITestOutputHelp
                     ? container.GetProperty("name").GetString()!
                     : container.GetString()!;
                 Assert.False(string.IsNullOrEmpty(containerName));
-                // Query items in each container (don't assert not empty, just check call works)
+                
                 var itemResult = await CallToolAsync(
                     "azmcp-cosmos-database-container-item-query",
                     new() { { "subscription", Settings.SubscriptionId }, { "account-name", Settings.ResourceBaseName! }, { "database-name", dbName! }, { "container-name", containerName! } });
