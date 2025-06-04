@@ -12,6 +12,8 @@
 
 ### Other Changes
 
+- Improved test coverage for Cosmos
+
 ## 0.1.2 (2025-06-03)
 
 ### Bugs Fixed
