@@ -190,7 +190,7 @@ public class CosmosCommandTests(LiveTestFixture liveTestFixture, ITestOutputHelp
                     ? container.GetProperty("name").GetString()!
                     : container.GetString()!;
                 Assert.False(string.IsNullOrEmpty(containerName));
-                
+
                 var itemResult = await CallToolAsync(
                     "azmcp-cosmos-database-container-item-query",
                     new() { { "subscription", Settings.SubscriptionId }, { "account-name", Settings.ResourceBaseName! }, { "database-name", dbName! }, { "container-name", containerName! } });
