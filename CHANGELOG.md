@@ -8,7 +8,7 @@
 
 ### Bugs Fixed
 
-- Monitor Query Logs Failing.  Fixed with https://github.com/Azure/azure-mcp/pull/280
+- Fixed failure starting Docker image. https://github.com/Azure/azure-mcp/pull/301
 
 ### Other Changes
 
