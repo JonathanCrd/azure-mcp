@@ -11,7 +11,6 @@ public class CosmosDbFixture : IAsyncLifetime
 {
     public async ValueTask InitializeAsync()
     {
-        // Usar LiveTestSettingsFixture para obtener ResourceBaseName
         var settingsFixture = new LiveTestSettingsFixture();
         await settingsFixture.InitializeAsync();
 
