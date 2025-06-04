@@ -13,31 +13,9 @@ namespace AzureMcp.Tests.Client;
 
 public class CosmosCommandTests(LiveTestFixture liveTestFixture, ITestOutputHelper output)
     : CommandTestsBase(liveTestFixture, output),
-    IClassFixture<LiveTestFixture>
+    IClassFixture<LiveTestFixture>,
+    IClassFixture<CosmosDbFixture>
 {
-    private record ToDoItem(
-        string id,
-        string title,
-        bool completed
-    );
-
-    private async Task PopulateDB()
-    {
-        CosmosClient client = new(
-            accountEndpoint: $"https://{Settings.ResourceBaseName}.documents.azure.com:443/",
-            tokenCredential: new DefaultAzureCredential()
-        );
-
-        Container container = client.GetContainer("ToDoList", "Items");
-
-        // Create a new item to insert into the container
-        ToDoItem item = new ToDoItem(Guid.NewGuid().ToString(), "Test Task", false);
-
-        ItemResponse<ToDoItem> response = await container.UpsertItemAsync<ToDoItem>(
-            item: item,
-            partitionKey: new PartitionKey(item.id)
-        );
-    }
 
     [Fact]
     [Trait("Category", "Live")]
@@ -92,14 +70,10 @@ public class CosmosCommandTests(LiveTestFixture liveTestFixture, ITestOutputHelp
         Assert.NotEmpty(containersArray.EnumerateArray());
     }
 
-    // [Fact(Skip = "Cosmos needs post script to add items")]
     [Fact]
     [Trait("Category", "Live")]
     public async Task Should_query_cosmos_database_container_items()
     {
-        // Prepopulate the database with a test item
-        await PopulateDB();
-
         var result = await CallToolAsync(
             "azmcp-cosmos-database-container-item-query",
             new()
@@ -135,9 +109,6 @@ public class CosmosCommandTests(LiveTestFixture liveTestFixture, ITestOutputHelp
     [Trait("Category", "Live")]
     public async Task Should_show_single_item_from_cosmos_account()
     {
-        // Prepolate the database with a test item
-        await PopulateDB();
-
         // List all databases for the account
         var dbResult = await CallToolAsync(
                     "azmcp-cosmos-database-list",
@@ -196,10 +167,6 @@ public class CosmosCommandTests(LiveTestFixture liveTestFixture, ITestOutputHelp
     [Trait("Category", "Live")]
     public async Task Should_list_and_query_multiple_databases_and_containers()
     {     
-        // Prepopulate the database with a test item
-        await PopulateDB();
-
-        // List all databases for the account
         var dbResult = await CallToolAsync(
             "azmcp-cosmos-database-list",
             new() { { "subscription", Settings.SubscriptionId }, { "account-name", Settings.ResourceBaseName } });
@@ -214,7 +181,7 @@ public class CosmosCommandTests(LiveTestFixture liveTestFixture, ITestOutputHelp
                 ? db.GetProperty("name").GetString()!
                 : db.GetString()!;
             Assert.False(string.IsNullOrEmpty(dbName));
-            // List containers for each database
+
             var containerResult = await CallToolAsync(
                 "azmcp-cosmos-database-container-list",
                 new() { { "subscription", Settings.SubscriptionId }, { "account-name", Settings.ResourceBaseName! }, { "database-name", dbName! } });
