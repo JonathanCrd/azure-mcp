@@ -1,9 +1,9 @@
 using System;
 using System.Threading.Tasks;
 using Azure.Identity;
+using AzureMcp.Tests.Client.Helpers;
 using Microsoft.Azure.Cosmos;
 using Xunit;
-using AzureMcp.Tests.Client.Helpers;
 
 namespace AzureMcp.Tests.Client;
 

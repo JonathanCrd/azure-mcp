@@ -2,11 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Text.Json;
-using Azure;
-using Azure.Identity;
-using AzureMcp.Models.Redis.ManagedRedis;
 using AzureMcp.Tests.Client.Helpers;
-using Microsoft.Azure.Cosmos;
 using Xunit;
 
 namespace AzureMcp.Tests.Client;
@@ -166,7 +162,7 @@ public class CosmosCommandTests(LiveTestFixture liveTestFixture, ITestOutputHelp
     [Fact]
     [Trait("Category", "Live")]
     public async Task Should_list_and_query_multiple_databases_and_containers()
-    {     
+    {
         var dbResult = await CallToolAsync(
             "azmcp-cosmos-database-list",
             new() { { "subscription", Settings.SubscriptionId }, { "account-name", Settings.ResourceBaseName } });
