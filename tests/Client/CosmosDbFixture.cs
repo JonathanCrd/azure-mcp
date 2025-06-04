@@ -9,19 +9,25 @@ namespace AzureMcp.Tests.Client;
 
 public class CosmosDbFixture : IAsyncLifetime
 {
+    private CosmosClient? _client;
+
     public async ValueTask InitializeAsync()
     {
         var settingsFixture = new LiveTestSettingsFixture();
         await settingsFixture.InitializeAsync();
 
-        CosmosClient client = new(
+        _client = new CosmosClient(
             accountEndpoint: $"https://{settingsFixture.Settings.ResourceBaseName}.documents.azure.com:443/",
             tokenCredential: new DefaultAzureCredential()
         );
-        Container container = client.GetContainer("ToDoList", "Items");
+        Container container = _client.GetContainer("ToDoList", "Items");
         var item = new { id = Guid.NewGuid().ToString(), title = "Test Task", completed = false };
         await container.UpsertItemAsync(item, new PartitionKey(item.id));
     }
 
-    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+    public ValueTask DisposeAsync()
+    {
+        _client?.Dispose();
+        return ValueTask.CompletedTask;
+    }
 }

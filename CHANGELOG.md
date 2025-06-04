@@ -12,7 +12,7 @@
 
 ### Other Changes
 
-- Improved test coverage for Cosmos https://github.com/Azure/azure-mcp/pull/304
+- Improved test coverage for Azure Cosmos DB https://github.com/Azure/azure-mcp/pull/304
 
 ## 0.1.2 (2025-06-03)
 
