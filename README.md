@@ -166,7 +166,7 @@ Click one of these buttons to install the Azure MCP Server for VS Code or VS Cod
 
 You might get prompted to open the link with VS Code and then select "Install Server".
 
-![Animation](https://github.com/user-attachments/assets/961bee1b-cb8d-40b9-83dc-d51eb557406c)
+![Animation](https://github.com/user-attachments/assets/2cac4c65-95ce-4945-b5dd-896ba2974dc0)
 
 Once you've installed the Azure MCP Server, make sure you select GitHub Copilot Agent Mode and refresh the tools list. To learn more about Agent Mode, visit the [VS Code Documentation](https://code.visualstudio.com/docs/copilot/chat/chat-agent-mode).
 
