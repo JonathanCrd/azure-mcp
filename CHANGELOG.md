@@ -1,16 +1,10 @@
 # Release History
 
-## 0.1.3 (Unreleased)
-
-### Features Added
-
-### Breaking Changes
+## 0.1.3 (2025-06-05)
 
 ### Bugs Fixed
 
 - Fixed failure starting Docker image. https://github.com/Azure/azure-mcp/pull/301
-
-### Other Changes
 
 ## 0.1.2 (2025-06-03)
 
