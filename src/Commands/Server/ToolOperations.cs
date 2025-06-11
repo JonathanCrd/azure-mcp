@@ -13,13 +13,16 @@ public class ToolOperations
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly CommandFactory _commandFactory;
+    private IReadOnlyDictionary<string, IBaseCommand> _toolCommands;
     private readonly ILogger<ToolOperations> _logger;
+    private string _commandGroup = string.Empty;
 
     public ToolOperations(IServiceProvider serviceProvider, CommandFactory commandFactory, ILogger<ToolOperations> logger)
     {
         _serviceProvider = serviceProvider;
         _commandFactory = commandFactory;
         _logger = logger;
+        _toolCommands = _commandFactory.AllCommands;
 
         ToolsCapability = new ToolsCapability
         {
@@ -30,16 +33,27 @@ public class ToolOperations
 
     public ToolsCapability ToolsCapability { get; }
 
+    public string? CommandGroup
+    {
+        get => _commandGroup;
+        set
+        {
+            _commandGroup = value ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(_commandGroup))
+            {
+                _toolCommands = _commandFactory.AllCommands;
+            }
+            else
+            {
+                _toolCommands = _commandFactory.GroupCommands(_commandGroup);
+            }
+        }
+    }
+
     private ValueTask<ListToolsResult> OnListTools(RequestContext<ListToolsRequestParams> requestContext,
         CancellationToken cancellationToken)
     {
-        var allCommands = _commandFactory.AllCommands;
-        if (allCommands.Count == 0)
-        {
-            return ValueTask.FromResult(new ListToolsResult { Tools = [] });
-        }
-
-        var tools = CommandFactory.GetVisibleCommands(allCommands)
+        var tools = CommandFactory.GetVisibleCommands(_toolCommands)
             .Select(kvp => GetTool(kvp.Key, kvp.Value))
             .ToList();
 
@@ -69,7 +83,7 @@ public class ToolOperations
             };
         }
 
-        var command = _commandFactory.FindCommandByName(parameters.Params.Name);
+        var command = _toolCommands.GetValueOrDefault(parameters.Params.Name);
         if (command == null)
         {
             var content = new Content
@@ -165,6 +179,11 @@ public class ToolOperations
 
             schema["properties"] = arguments;
             schema["required"] = new JsonArray(options.Where(p => p.IsRequired).Select(p => (JsonNode)p.Name).ToArray());
+        }
+        else
+        {
+            var arguments = new JsonObject();
+            schema["properties"] = arguments;
         }
 
         var newOptions = new JsonSerializerOptions(McpJsonUtilities.DefaultOptions);

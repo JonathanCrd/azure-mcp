@@ -12,6 +12,7 @@ using NSubstitute;
 using Xunit;
 
 namespace AzureMcp.Tests.Commands.Server;
+
 public class ToolOperationsTest
 {
     // https://json-schema.org/understanding-json-schema/reference/type
@@ -87,5 +88,56 @@ public class ToolOperationsTest
                 }
             }
         }
+    }
+
+    [Theory]
+    [InlineData(null)] // All tools
+    [InlineData("storage")]
+    [InlineData("keyvault")]
+    [InlineData("group")]
+    public async Task GetsToolsByCommandGroup(string? commandGroup)
+    {
+        var operations = new ToolOperations(_serviceProvider, _commandFactory, _logger)
+        {
+            CommandGroup = commandGroup
+        };
+        var requestContext = new RequestContext<ListToolsRequestParams>(_server);
+        var handler = operations.ToolsCapability.ListToolsHandler;
+        Assert.NotNull(handler);
+        var result = await handler(requestContext, CancellationToken.None);
+        Assert.NotNull(result);
+        Assert.NotEmpty(result.Tools);
+
+        // If a group is specified, all tool names should start with that group
+        if (!string.IsNullOrWhiteSpace(commandGroup))
+        {
+            foreach (var tool in result.Tools)
+            {
+                Assert.StartsWith($"{commandGroup}-", tool.Name);
+            }
+        }
+        else
+        {
+            // If no group, ensure we have a mix of tools from different groups
+            var toolGroups = result.Tools.Select(t => t.Name.Split('-')[1]).Distinct().ToList();
+            Assert.True(toolGroups.Count > 1, "Should return tools from multiple groups when no CommandGroup is set.");
+        }
+    }
+
+    [Fact]
+    public async Task GetsNoToolsForUnknownCommandGroup()
+    {
+        var ex = await Assert.ThrowsAsync<KeyNotFoundException>(async () =>
+        {
+            var operations = new ToolOperations(_serviceProvider, _commandFactory, _logger)
+            {
+                CommandGroup = "unknown-group"
+            };
+            var requestContext = new RequestContext<ListToolsRequestParams>(_server);
+            var handler = operations.ToolsCapability.ListToolsHandler;
+            Assert.NotNull(handler);
+            await handler(requestContext, CancellationToken.None);
+        });
+        Assert.Contains("unknown-group", ex.Message);
     }
 }
