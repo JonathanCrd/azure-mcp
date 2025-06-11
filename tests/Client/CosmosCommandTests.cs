@@ -106,9 +106,9 @@ public class CosmosCommandTests(LiveTestFixture liveTestFixture, ITestOutputHelp
     public async Task Should_show_single_item_from_cosmos_account()
     {
         var dbResult = await CallToolAsync(
-                    "azmcp-cosmos-database-list",
-                    new()
-                    {
+            "azmcp-cosmos-database-list",
+            new()
+            {
                 { "subscription", Settings.SubscriptionId },
                 { "account-name", Settings.ResourceBaseName }
             }
@@ -122,7 +122,7 @@ public class CosmosCommandTests(LiveTestFixture liveTestFixture, ITestOutputHelp
         var firstDatabase = dbEnum.First();
         string dbName = firstDatabase.ValueKind == JsonValueKind.Object
             ? firstDatabase.GetProperty("name").GetString()!
-            : firstDatabase.GetString()!;
+            : throw new InvalidOperationException($"Unexpected database element ValueKind: {firstDatabase.ValueKind}");
         Assert.False(string.IsNullOrEmpty(dbName));
 
         var containerResult = await CallToolAsync(
@@ -142,7 +142,7 @@ public class CosmosCommandTests(LiveTestFixture liveTestFixture, ITestOutputHelp
         var firstContainer = contEnum.First();
         string containerName = firstContainer.ValueKind == JsonValueKind.Object
             ? firstContainer.GetProperty("name").GetString()!
-            : firstContainer.GetString()!;
+            : throw new InvalidOperationException($"Unexpected container element ValueKind: {firstContainer.ValueKind}");
         Assert.False(string.IsNullOrEmpty(containerName));
 
         var itemResult = await CallToolAsync(
@@ -194,7 +194,7 @@ public class CosmosCommandTests(LiveTestFixture liveTestFixture, ITestOutputHelp
             {
                 string containerName = container.ValueKind == JsonValueKind.Object
                     ? container.GetProperty("name").GetString()!
-                    : container.GetString()!;
+                    : throw new InvalidOperationException($"Unexpected container element ValueKind: {container.ValueKind}");
                 Assert.False(string.IsNullOrEmpty(containerName));
 
                 var itemResult = await CallToolAsync(
