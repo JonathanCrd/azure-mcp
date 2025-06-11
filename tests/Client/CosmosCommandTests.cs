@@ -111,7 +111,8 @@ public class CosmosCommandTests(LiveTestFixture liveTestFixture, ITestOutputHelp
                     {
                 { "subscription", Settings.SubscriptionId },
                 { "account-name", Settings.ResourceBaseName }
-                    });
+            }
+        );
         var databases = dbResult.AssertProperty("databases");
         Assert.Equal(JsonValueKind.Array, databases.ValueKind);
         var dbEnum = databases.EnumerateArray();
@@ -164,7 +165,12 @@ public class CosmosCommandTests(LiveTestFixture liveTestFixture, ITestOutputHelp
     {
         var dbResult = await CallToolAsync(
             "azmcp-cosmos-database-list",
-            new() { { "subscription", Settings.SubscriptionId }, { "account-name", Settings.ResourceBaseName } });
+            new()
+            {
+                { "subscription", Settings.SubscriptionId },
+                { "account-name", Settings.ResourceBaseName }
+            }
+        );
         var databases = dbResult.AssertProperty("databases");
         Assert.Equal(JsonValueKind.Array, databases.ValueKind);
         var databasesEnum = databases.EnumerateArray();
