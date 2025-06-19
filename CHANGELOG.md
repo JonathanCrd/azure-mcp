@@ -1,18 +1,14 @@
 # Release History
 
-## 0.2.3 (Unreleased)
+## 0.2.3 (2025-06-19)
 
 ### Features Added
 
 - Adds support to launch MCP server in readonly mode - https://github.com/Azure/azure-mcp/pull/410
 
-### Breaking Changes
-
 ### Bugs Fixed
 
 - MCP tools now expose annotations to clients https://github.com/Azure/azure-mcp/pull/388
-
-### Other Changes
 
 ## 0.2.2 (2025-06-17)
 
