@@ -1,6 +1,6 @@
 # Release History
 
-## 0.2.4 (Unreleased)
+## 0.2.4 (2025-06-24)
 
 ### Features Added
 
@@ -9,8 +9,6 @@
 ### Breaking Changes
 
 - Changed the command for workspace-based logs query in Azure Monitor from `azmcp-monitor-log-query` to `azmcp-monitor-workspace-logs-query`
-
-### Bugs Fixed
 
 ### Other Changes
 
