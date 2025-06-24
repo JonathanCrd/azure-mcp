@@ -432,6 +432,12 @@ See the [Authentication guide](https://github.com/Azure/azure-mcp/blob/main/docs
 2. Complete the authentication setup as described in the [Authentication guide](https://github.com/Azure/azure-mcp/blob/main/docs/Authentication.md)
 3. Verify access by running `az account show` to confirm you're authenticated with the correct account type
 
+## Development in VS Code
+
+### Use your own language model key
+
+Follow the instructions in [Bring your own language model key](https://code.visualstudio.com/docs/copilot/language-models#_bring-your-own-language-model-key) docs to utilize your API Keys for the language model providers you already have in VS Code.
+
 ## Common issues
 
 ### Console window is empty when running Azure MCP Server
