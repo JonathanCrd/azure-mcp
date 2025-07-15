@@ -53,13 +53,13 @@ public class ContainerAppsCommandTests : CommandTestsBase,
             // assert
             var registryProperty = result.AssertProperty("registry");
             Assert.Equal(JsonValueKind.Object, registryProperty.ValueKind);
-            
+
             var nameProperty = registryProperty.AssertProperty("name");
             Assert.Equal(registryName, nameProperty.GetString());
-            
+
             var locationProperty = registryProperty.AssertProperty("location");
             Assert.Equal(location, locationProperty.GetString());
-            
+
             var skuProperty = registryProperty.AssertProperty("sku");
             Assert.Equal(sku, skuProperty.GetString());
         }

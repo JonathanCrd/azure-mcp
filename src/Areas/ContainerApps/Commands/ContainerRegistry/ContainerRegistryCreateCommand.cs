@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.CommandLine.Parsing;
 using AzureMcp.Areas.ContainerApps.Commands;
 using AzureMcp.Areas.ContainerApps.Models;
 using AzureMcp.Areas.ContainerApps.Options;
@@ -9,12 +10,10 @@ using AzureMcp.Areas.ContainerApps.Services;
 using AzureMcp.Commands;
 using AzureMcp.Services.Telemetry;
 using Microsoft.Extensions.Logging;
-using System.CommandLine.Parsing;
 
 namespace AzureMcp.Areas.ContainerApps.Commands.ContainerRegistry;
 
-public sealed class ContainerRegistryCreateCommand(ILogger<ContainerRegistryCreateCommand> logger) 
-    : BaseContainerAppsCommand<ContainerRegistryCreateOptions>()
+public sealed class ContainerRegistryCreateCommand(ILogger<ContainerRegistryCreateCommand> logger) : BaseContainerAppsCommand<ContainerRegistryCreateOptions>()
 {
     private const string CommandTitle = "Create Azure Container Registry";
     private readonly ILogger<ContainerRegistryCreateCommand> _logger = logger;
